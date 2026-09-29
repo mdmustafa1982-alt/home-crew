@@ -815,6 +815,7 @@ Zucchini:dipankar:zucchini
 Drumstick:dipankar:sajna|sojne|moringa|drumstick
 Raw banana:dipankar:kacha kola|raw banana|kachkola
 Radish:dipankar:mooli|mulo|radish
+Coriander seeds:mini:coriander seeds|dhania seeds|dhania powder
 Coriander leaves:dipankar:dhania|dhone pata|coriander
 Mint leaves:dipankar:pudina|mint
 Curry leaves:dipankar:kadi patta|curry leaves|curry patta
@@ -841,7 +842,7 @@ Amla:raju:amla|gooseberry
 Berries:raju:strawberry|strawberries|blueberry|blueberries|berries
 Coconut water:raju:coconut water|daab|tender coconut
 Seasonal fruit:raju:seasonal fruit|fruits|fruit
-Paneer:sandip:paneer|cottage cheese
+Paneer:sandip:paneer|panner|cottage cheese
 Tofu:mini:tofu
 Mushroom:sandip:mushroom
 Ghee:sandip:ghee
@@ -893,6 +894,7 @@ Peanut butter:mini:peanut butter
 Honey:mini:honey|shahad|madhu
 Jaggery:mini:jaggery|gur|gud
 Green tea:mini:green tea
+Matcha tea:mini:matcha tea|macha tea|matcha|macha
 Tea:mini:tea|chai
 Coffee:mini:black coffee|coffee
 Olive oil:mini:olive oil
@@ -901,16 +903,21 @@ Coconut oil:mini:coconut oil
 Rice bran oil:mini:rice bran oil
 Brown bread:mini:brown bread|multigrain bread|whole wheat bread
 Bread:mini:bread|toast
-Idli batter:mini:idli|dosa
+Idli batter:mini:idli|dosa|uttapam|utthapam|uttapa
 Coconut:mini:coconut|nariyal|narkel
 Turmeric:mini:haldi|turmeric
 Cumin:mini:jeera|cumin
-Cinnamon:mini:dalchini|cinnamon
+Cinnamon:mini:dalchini|cinnamon|cinamom|cinnamom
 Black pepper:mini:kali mirch|black pepper
 Fenugreek seeds:mini:methi seeds|methi dana|fenugreek seeds
 Ajwain:mini:ajwain|carom
 Vermicelli:mini:vermicelli|seviyan|semai
-Cornflakes:mini:cornflakes|corn flakes`.split("\n").map(l=>{const [n,v,w]=l.split(":");return {n,v,w:w.split("|")}});
+Cornflakes:mini:cornflakes|corn flakes
+Optimo-DM:dipti:optimo-dm|optimo dm|optimo
+Digestive biscuits:mini:digestive oats biscuit|oats biscuit|digestive biscuit|digestive biscuits|marie biscuit
+Papad:mini:papad|papadum
+Rock salt:mini:pink salt|rock salt|sendha namak|himalayan salt|himalaya pink salt
+Mixed vegetables:dipankar:mixed veg|mixed vegetables|veg saute`.split("\n").map(l=>{const [n,v,w]=l.split(":");return {n,v,w:w.split("|")}});
 const AVOID_RE=/\b(avoid|avoided|not allowed|restrict|restricted|don'?t|do not|no more|stop|skip|limit)\b/i;
 function dietMatch(text){ // returns [{n,v,ctx}] – longest words first, "avoid" lines skipped
   const cat=items(),terms=[];
@@ -918,11 +925,11 @@ function dietMatch(text){ // returns [{n,v,ctx}] – longest words first, "avoid
   Object.values(cat).forEach(i=>{if(!DIET_WORDS.some(d=>d.n.toLowerCase()===i.name.toLowerCase()))terms.push([i.name.toLowerCase(),{n:i.name,v:i.vendor}])});
   terms.sort((a,b)=>b[0].length-a[0].length);
   const found=new Map();
-  text.split(/\n+/).forEach(line=>{
+  text.split(/\n+/).flatMap(l=>l.split(/[()]/)).forEach(line=>{
     if(!line.trim()||AVOID_RE.test(line))return;
-    let work=" "+line.toLowerCase()+" ";
+    let work=" "+line.toLowerCase().replace(/\s+/g," ")+" ";
     terms.forEach(([w,d])=>{
-      const re=new RegExp("(^|[^a-z])("+w.replace(/[.*+?^${}()|[\]\\]/g,"\\/* ============ SHOPPING ============ */")+")(e?s)?(?=[^a-z]|$)","g");
+      const re=new RegExp("(^|[^a-z])("+w.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+")(e?s)?(?=[^a-z]|$)","g");
       if(re.test(work)){work=work.replace(re,(m0,p1)=>p1+" ".repeat(m0.length-p1.length));
         if(!found.has(d.n))found.set(d.n,{n:d.n,v:pickVendor(d.n,d.v),ctx:line.trim().slice(0,90)})}
     });
@@ -973,30 +980,49 @@ const MEAL_LABEL={early:"Early morning",breakfast:"Breakfast",mid:"Mid-morning",
 // a clock time on its own ("7:00 am", "4.30 pm", "13:00") also tells the meal
 function timeMeal(t){const m=(t||"").match(/\b(\d{1,2})(?:[:.](\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)?\b/i);if(!m)return null;if(!m[2]&&!m[3])return null;
   let h=+m[1];const ap=(m[3]||"").toLowerCase()[0];if(ap==="p"&&h<12)h+=12;if(ap==="a"&&h===12)h=0;if(h>23)return null;const x=h+(+(m[2]||0))/60;
-  return x<8?"early":x<10.5?"breakfast":x<12.5?"mid":x<15.5?"lunch":x<19.5?"evening":x<22?"dinner":"bed"}
+  return x<8.5?"early":x<10.5?"breakfast":x<12.5?"mid":x<15.5?"lunch":x<19.5?"evening":x<22?"dinner":"bed"}
 const mealOf=t=>{for(const k of ["mid","bed","early","breakfast","lunch","evening","dinner"])if(MEAL_RE[k].test(t)){if(k==="early"&&MEAL_RE.breakfast.test(t)&&!/\b(pre|before)\b/i.test(t))return "breakfast";return k}return null};
 const mealOrTime=t=>mealOf(t)||(t.length<24?timeMeal(t):null);
 const dayOf=t=>{t=(t||"").trim();let m=t.match(/^(mon|tue|wed|thu|fri|sat|sun)[a-z]*\.?$/i);if(m)return "wd:"+["sun","mon","tue","wed","thu","fri","sat"].indexOf(m[1].toLowerCase());m=t.match(/^day\s*-?\s*(\d{1,2})$/i);return m?"day:"+m[1]:null};
+const TIME_PAT="\\d{1,2}(?:[:.]\\d{2})?\\s*(?:am|pm|a\\.m\\.|p\\.m\\.)?";
+const TIME_LINE=new RegExp("^\\(?("+TIME_PAT+")(?:\\s*(?:-|–|to)\\s*("+TIME_PAT+"))?\\)?\\s*(?:[:|–-]\\s*)?(.*)$","i");
+function rangeMeal(a,b){const ap=x=>(x.match(/(am|pm|a\.m\.|p\.m\.)/i)||[])[1];if(!ap(a)&&b&&ap(b))a=a+" "+ap(b);return timeMeal(a)||(b?timeMeal(b):null)}
+const NOTE_RE=/^(note|tips?|instructions?|general|exercise|work ?out|use\b|minimum|maximum|regular|daily|always|never|avoid|walk|sleep \d|\d+\s*[-–]\s*\d+\s*(lit|ltr|litre|l\b|glass))/i;
+const BED_TXT=/\b(before (going )?(to )?(the )?(bed|sleep)|bed ?time|at bed ?time)\b/i;
+// "2 days- Mixed veg saute" / "Chicken stew, salad -2 days." → how many days of the week this option is for
+const DAYS_RE=/(^|[\s\-–,(])(\d)\s*days?\b\.?\s*[-–:]?\s*/i;
+const dayCount=t=>{const m=(t||"").match(DAYS_RE);return m?+m[2]:0};
+const dropCount=t=>(t||"").replace(DAYS_RE,"$1").replace(/^[\s\-–,.]+|[\s\-–,.]+$/g,"").replace(/\s{2,}/g," ");
 function parseDietMeals(text){
   const out={generic:{},byDay:{}};
-  const add=(dk,meal,txt)=>{txt=(txt||"").replace(/^[\s:–\-|•*]+/,"").replace(/^\(?(\d{1,2}[:.]\d{2}\s*(am|pm)?|\d{1,2}\s*(am|pm))\)?\s*[:–-]?\s*/i,"").replace(/^(early morning|breakfast|lunch|dinner|supper|mid[- ]?morning|evening( snacks?)?|snacks?|bed ?time)\s*(\([^)]*\))?\s*[:–-]\s*/i,"").trim();if(!txt||txt.length<2)return;const o=dk?(out.byDay[dk]=out.byDay[dk]||{}):out.generic;(o[meal]=o[meal]||[]).push(txt)};
+  const clean=t=>(t||"").replace(/^[\s:–\-|•*]+/,"").replace(/^(early morning|breakfast|lunch|dinner|supper|mid[- ]?morning|evening( snacks?)?|snacks?|bed ?time)\s*(\([^)]*\))?\s*[:–-]\s*/i,"").trim();
+  const add=(dk,meal,txt)=>{txt=clean(txt);if(!txt||txt.length<2)return;const o=dk?(out.byDay[dk]=out.byDay[dk]||{}):out.generic,arr=o[meal]=o[meal]||[];
+    if(arr.length&&/\/\s*$/.test(arr[arr.length-1]))arr[arr.length-1]=arr[arr.length-1].replace(/\s*\/\s*$/,"")+" OR "+txt;   // "…/" = or the next line
+    else arr.push(txt)};
   let mode=null,cols=[],cur=null;
   for(const line of text.replace(/\r/g,"").split(/\n+/).map(l=>l.replace(/\t+/g," | ").replace(/\s*\|\s*$/,"").trim()).filter(Boolean)){
-    if(AVOID_RE.test(line)){cur=null;continue}
+    const bare=line.replace(/^[|\s]+/,"");
+    if(AVOID_RE.test(bare.split("(")[0])){cur=null;continue}
     const cells=line.split("|").map(c=>c.trim());
     if(cells.length>=3){
       const dc=cells.map(dayOf),mc=cells.map(c=>c.length<32?mealOf(c):null);
-      if(dc.filter(Boolean).length>=3){mode="days";cols=dc;cur=null;continue}           // header: | Mon | Tue | …
-      if(mc.filter(Boolean).length>=2){mode="meals";cols=mc;cur=null;continue}         // header: Day | Breakfast | Lunch | …
+      if(dc.filter(Boolean).length>=3){mode="days";cols=dc;cur=null;continue}
+      if(mc.filter(Boolean).length>=2){mode="meals";cols=mc;cur=null;continue}
       if(mode==="days"){const m=mealOrTime(cells[0]);if(m){cells.forEach((c,i)=>{if(i&&cols[i])add(cols[i],m,c)});continue}}
       if(mode==="meals"){const d=dayOf(cells[0]);cells.forEach((c,i)=>{if(i&&cols[i])add(d,cols[i],c)});continue}
     }
-    const m1=line.match(/^([^:|–(]{2,45}?)\s*(?:\([^)]*\))?\s*(?:[:|–]|\s-\s)\s*(.+)$/);
-    if(m1&&mealOrTime(m1[1])){cur=mealOrTime(m1[1]);add(null,cur,m1[2]);continue}
-    const tl=line.match(/^\(?(\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.)|\d{1,2}[:.]\d{2})\)?\s*(?:[:|–-]\s*)?(.{3,})$/i); // "7:00 am Warm water…"
-    if(tl&&timeMeal(tl[1])){const lead=tl[2].match(/^([^:|–]{2,30}?)\s*(?:[:|–]|\s-\s)\s*(.+)$/);cur=(lead&&mealOf(lead[1]))||timeMeal(tl[1]);add(null,cur,lead&&mealOf(lead[1])?lead[2]:tl[2]);continue}
-    if(line.length<45&&mealOrTime(line)&&!/,/.test(line)){cur=mealOrTime(line);continue}  // a heading on its own line
-    if(cur&&line.length<220&&!/^(note|tips?|instructions?|general|drink|water|exercise)/i.test(line))add(null,cur,line);
+    // "8:30AM- 9:30 AM- Sattu sarbat", "1:00-1:30pm-Chicken stew", "7 am – warm water"
+    const tl=bare.match(TIME_LINE);
+    if(tl&&(tl[3]||"").length>=2){const m=rangeMeal(tl[1],tl[2]);
+      if(m){const rest=tl[3],lead=rest.match(/^([^:|–]{2,30}?)\s*(?:[:|–]|\s-\s)\s*(.+)$/),lm=lead&&mealOf(lead[1]);cur=lm||m;add(null,cur,lm?lead[2]:rest);continue}}
+    // "Breakfast: …", "Mid-morning | …", "As soon as u wake up-Soaked …"
+    const m1=bare.match(/^([^:|–(]{2,45}?)\s*(?:\([^)]*\))?\s*(?:[:|–]|\s-\s)\s*(.+)$/)||bare.match(/^([^:|–(-]{2,45}?)\s*-\s*(.+)$/);
+    if(m1&&mealOf(m1[1])){cur=mealOf(m1[1]);add(null,cur,m1[2]);continue}
+    if(bare.length<45&&mealOrTime(bare)&&!/,/.test(bare)){cur=mealOrTime(bare);continue}      // heading on its own line
+    if(/^-/.test(bare)||NOTE_RE.test(bare)){cur=null;continue}                              // advice at the end, not a meal
+    if(!cur||bare.length>=220)continue;
+    if(BED_TXT.test(bare)){add(null,"bed",bare);cur=null;continue}                          // "(Before going the bed take the drink)"
+    add(null,cur,bare);
   }
   return out;
 }
@@ -1011,7 +1037,7 @@ let dietSel="";
 function curDiet(){const d=diets();return d.find(x=>x.id===dietSel)||d[0]||null}
 function saveDiet(p){const list=diets().filter(x=>x.id!==p.id);list.unshift(p);store.set("ghar-diet",list.slice(0,12))}
 function newDiet(name,text){
-  const p={id:uid(),name:name||"Diet chart",from:"Rinki",for:"Family",added:todayISO(),by:me(),text,items:dietMatch(text).map(x=>Object.assign(x,{st:"",q:""})),checkWith:"Khala",meals:parseDietMeals(text),mv:2};
+  const p={id:uid(),name:name||"Diet chart",from:"Rinki",for:"Family",added:todayISO(),by:me(),text,items:dietMatch(text).map(x=>Object.assign(x,{st:"",q:""})),checkWith:"Khala",meals:parseDietMeals(text),mv:3};
   saveDiet(p);dietSel=p.id;return p;
 }
 function dietShareText(p){
@@ -1050,7 +1076,7 @@ function vDiet(){
   h+=`</div><details class="card"><summary style="cursor:pointer;font-weight:800">See the chart text</summary><pre style="white-space:pre-wrap;font:600 13.5px/1.45 var(--body);margin:10px 0 0">${esc(p.text)}</pre></details>`;
   return h;
 }
-const MEAL_PARSER=2;
+const MEAL_PARSER=3;
 function dietMenuCard(p){
   if(!p.meals||p.mv!==MEAL_PARSER){p.meals=parseDietMeals(p.text||"");p.mv=MEAL_PARSER;saveDiet(JSON.parse(JSON.stringify(p)))}
   const g=p.meals.generic||{},dayKeys=Object.keys(p.meals.byDay||{}),t=todayISO();
@@ -1058,7 +1084,8 @@ function dietMenuCard(p){
   const found=MEAL_ORDER.filter(k=>(g[k]||[]).length||dayKeys.some(dk=>(p.meals.byDay[dk][k]||[]).length));
   let h=`<h2><span class="hic" data-tone="dawn" aria-hidden="true">📅</span>Put this diet on the menu</h2><div class="card">`;
   if(!found.length) return h+`<p class="muted" style="margin:0">Couldn’t find meal times in this chart. Put each meal on its own line starting with the meal or the time – e.g. “Breakfast: oats with milk” or “8 am – oats with milk” – and paste it again.</p></div>`;
-  h+=`<p class="muted" style="margin:0 0 8px;font-size:13.5px">${dayKeys.length?`Found a day-wise plan (${dayKeys.length} days). `:""}Check the meals, choose the dates, and the weekly menu fills in for Khala and Asha.</p>`;
+  const rotates=MEAL_ORDER.some(k=>(g[k]||[]).some(t=>dayCount(t)));
+  h+=`<p class="muted" style="margin:0 0 8px;font-size:13.5px">${dayKeys.length?`Found a day-wise plan (${dayKeys.length} days). `:""}Check the meals (one option per line), choose the dates, and the weekly menu fills in for Khala and Asha.${rotates?" Options marked “2 days”, “4 days” … are spread across the chosen days.":""}</p>`;
   if(!dayKeys.length) h+=MEAL_ORDER.filter(k=>(g[k]||[]).length).map(k=>`<label class="f" for="dm-${k}">${MEAL_LABEL[k]} <span class="faint">→ ${SLOTS.find(x=>x.id===MEAL_SLOT[k][0]).label}</span></label><textarea class="in" id="dm-${k}" style="min-height:48px" data-f="dietMeal" data-m="${k}">${esc(g[k].join("\n"))}</textarea>`).join("");
   else h+=`<div class="menuline" style="margin:0 0 6px">${dayKeys.sort().map(dk=>{const lbl=dk.startsWith("wd:")?WD[+dk.slice(3)]:"Day "+dk.slice(4);return `<b>${lbl}:</b> ${MEAL_ORDER.filter(k=>(p.meals.byDay[dk][k]||[]).length).map(k=>MEAL_LABEL[k]+" – "+esc(p.meals.byDay[dk][k].join(", "))).join(" · ")}`}).join("<br>")}</div>`;
   h+=`<div class="grid2"><div><label class="f" for="dFrom">From</label><input class="in" type="date" id="dFrom" value="${a.from}"></div><div><label class="f" for="dTo">To</label><input class="in" type="date" id="dTo" value="${a.to}"></div></div>
@@ -1465,7 +1492,10 @@ const A={
     if(Math.round((toD(to)-toD(from))/864e5)>62){toast("Choose up to 2 months at a time");return}
     const weeks={};let n=0;
     for(let d=from;d<=to;d=addDays(d,1)){if(!days.includes(dow(d)))continue;const meals=mealsFor(p0,d,from),bySlot={};
-      MEAL_ORDER.forEach(k=>(meals[k]||[]).forEach(t=>{const [sl,pre]=MEAL_SLOT[k];(bySlot[sl]=bySlot[sl]||[]).push("#🥗 "+(pre?pre+": ":"")+t)}));
+      MEAL_ORDER.forEach(k=>{const list=meals[k]||[],fixed=list.filter(t=>!dayCount(t)),rot=[];
+        list.filter(t=>dayCount(t)).forEach(t=>{for(let j=0;j<dayCount(t);j++)rot.push(t)});
+        const pick=fixed.concat(rot.length?[rot[n%rot.length]]:[]);
+        pick.forEach(t=>{const [sl,pre]=MEAL_SLOT[k];(bySlot[sl]=bySlot[sl]||[]).push("#🥗 "+(pre?pre+": ":"")+dropCount(t))})});
       if(!Object.keys(bySlot).length)continue;
       const w=mondayOf(d),m=weeks[w]=weeks[w]||JSON.parse(JSON.stringify(menuRec(w)));m.days[d]=m.days[d]||{};
       for(const sl in bySlot){const cur=(m.days[d][sl]||[]).filter(x=>!x.startsWith("#🥗"));m.days[d][sl]=mode==="replace"?bySlot[sl]:cur.concat(bySlot[sl])}
