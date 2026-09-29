@@ -130,6 +130,19 @@ input[type=checkbox]{width:20px;height:20px;accent-color:var(--dusk)}
 label.f{display:block;font-size:13.5px;font-weight:800;color:var(--ink-2);margin:12px 0 5px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 @media (max-width:520px){.grid2{grid-template-columns:1fr}}
+/* heading icon badges + coloured number tiles */
+.hic{width:36px;height:36px;border-radius:12px;display:inline-grid;place-items:center;font-size:19px;flex:none;background:var(--tint);box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--tone) 35%,transparent)}
+h1 .hic{width:42px;height:42px;font-size:23px;border-radius:14px;vertical-align:-8px;margin-right:6px}
+h1:has(.hic){display:flex;align-items:center;gap:4px}
+.summary .stat:nth-child(4n+1){--tone:var(--gold);--tint:var(--gold-tint)}
+.summary .stat:nth-child(4n+2){--tone:var(--dusk);--tint:var(--dusk-tint)}
+.summary .stat:nth-child(4n+3){--tone:var(--dawn);--tint:var(--dawn-tint)}
+.summary .stat:nth-child(4n+4){--tone:var(--noon);--tint:var(--noon-tint)}
+.summary .stat{background:var(--tint);border-color:color-mix(in srgb,var(--tone) 45%,var(--line))}
+.summary .stat b{color:var(--ink)}
+.bud .l b::before{content:"";display:inline-block;width:10px;height:10px;border-radius:4px;background:var(--cc,var(--ink-3));margin-right:7px;vertical-align:1px}
+.vend:nth-of-type(5n+1) .vh{background:var(--noon-tint)}.vend:nth-of-type(5n+2) .vh{background:var(--dawn-tint)}.vend:nth-of-type(5n+3) .vh{background:var(--day-tint)}.vend:nth-of-type(5n+4) .vh{background:var(--dusk-tint)}.vend:nth-of-type(5n+5) .vh{background:var(--gold-tint)}
+.datebar .iconbtn{background:var(--gold-tint);border-color:var(--gold);color:var(--gold-ink)}
 /* segmented */
 .seg{display:inline-flex;background:var(--soft);border-radius:16px;padding:3px;gap:2px;flex-wrap:wrap}
 .seg button{border:0;background:none;border-radius:13px;padding:5px 11px;font-size:13.5px;font-weight:800;color:var(--ink-2);min-height:32px}
@@ -535,7 +548,7 @@ function vToday(){
   const rec0=rec;
   h+=`<div class="steps" role="list">${list.map(r=>{const tk=tasksOn(r,d).concat((rec0.extra||{})[r.id]||[]),st=(rec0.tasks||{})[r.id]||{},a=(rec0.att||{})[r.id],away=a==="absent"||a==="leave";
     return `<button class="pstep${rec0.review&&rec0.review[r.id]?" done":""}${away?" away":""}" data-tone="${toneOf(r)}" data-a="jump" data-r="${r.id}" role="listitem"><span class="se">${r.icon||"👤"}</span><span class="sl">${esc(r.person)}</span><span class="sr">${esc(r.title)}</span><span class="sd">${tk.slice(0,8).map(t=>`<i class="${st[t.id]?"on":""}"></i>`).join("")}</span></button>`}).join("")}</div>`;
-  h+=`<h2>Staff work <small>${list.length} due today</small></h2>`;
+  h+=`<h2><span class="hic" data-tone="day" aria-hidden="true">🧹</span>Staff work <small>${list.length} due today</small></h2>`;
   // group by person so Shambhu Da / Asha sit together
   const prev=dayRec(addDays(d,-1));
   list.forEach(r=>h+=staffCard(r,d,rec,prev));
@@ -543,7 +556,7 @@ function vToday(){
   h+=supplies(d,rec);
   // approval
   const pending=list.filter(r=>!(rec.review&&rec.review[r.id]));
-  h+=`<h2>Approve the day</h2><div class="card">`;
+  h+=`<h2><span class="hic" data-tone="noon" aria-hidden="true">✅</span>Approve the day</h2><div class="card">`;
   if(rec.approved){h+=`<div class="row"><span class="reviewed">✓ Approved by ${esc(rec.approved.by)} · ${fmtTime(rec.approved.at)}</span><span class="sp"></span><button class="btn sm ghost" data-a="unapprove">Undo</button></div>`}
   else{
     h+=`<p class="muted" style="margin:0 0 10px">${pending.length?`Still to review: ${pending.map(r=>esc(r.person)+" – "+esc(r.title)).join(", ")}.`:"All staff reviewed. Approve to lock in today’s record."}</p>`;
@@ -595,7 +608,7 @@ function staffCard(r,d,rec,prev){
 function supplies(d,rec){
   const sup=rec.sup||{};
   const list=roles().filter(r=>r.kind==="supply"&&r.active!==false);
-  let h=`<h2>Daily supplies & deliveries</h2><div class="card">`;
+  let h=`<h2><span class="hic" data-tone="aqua" aria-hidden="true">🥛</span>Daily supplies & deliveries</h2><div class="card">`;
   list.forEach(r=>{
     const s=sup[r.id]||{};
     if(r.pay==="trip"){
@@ -724,7 +737,7 @@ function vShop(){
   const list=shop(),cutoff=addDays(todayISO(),-7);
   const vis=list.filter(i=>i.status!=="got"||(i.gotOn||"")>=cutoff);
   const vendors=roles().filter(r=>r.kind==="vendor"||r.id==="milk");
-  let h=`<h1>Shopping</h1><p class="sub">Build lists from the approved menu, send them to each shop, then tick what arrived and check quality.</p>`;
+  let h=`<h1><span class="hic" data-tone="gold" aria-hidden="true">🛒</span>Shopping</h1><p class="sub">Build lists from the approved menu, send them to each shop, then tick what arrived and check quality.</p>`;
   h+=`<div class="card"><div class="row"><button class="btn pri" data-a="fromMenu" data-n="0">+ From this week’s menu</button><button class="btn" data-a="fromMenu" data-n="1">+ Next week’s menu</button></div>
    <div class="addrow" style="margin-top:12px"><input class="in" id="newItem" placeholder="Add item, e.g. Atta 5kg" data-enter="addItem" list="itemNames">
    <select class="in" id="newVend" style="max-width:40%">${vendors.map(r=>`<option value="${r.id}">${esc(r.person)}</option>`).join("")}</select>
@@ -801,7 +814,7 @@ function vMoney(){
    <div class="stat"><b class="num">${rupee(unpaidBills)}</b><span>unpaid shop bills</span></div></div>`;
   if(roles().some(r=>r.pay!=="bill"&&!(+r.rate))) h+=`<div class="hint">Some pay rates are still ₹0. Add them in ⚙︎ Setup → Staff & vendors so dues are right.</div>`;
   // staff table
-  h+=`<h2>Staff & services <small>due vs paid</small></h2><div class="card"><div class="tscroll"><table class="t"><thead><tr><th>Person</th><th class="r">Due</th><th class="r">Paid</th><th class="r">Balance</th><th></th></tr></thead><tbody>`;
+  h+=`<h2><span class="hic" data-tone="dusk" aria-hidden="true">👥</span>Staff & services <small>due vs paid</small></h2><div class="card"><div class="tscroll"><table class="t"><thead><tr><th>Person</th><th class="r">Due</th><th class="r">Paid</th><th class="r">Balance</th><th></th></tr></thead><tbody>`;
   people.forEach((rs,person)=>{
     const lines=rs.map(r=>({r,x:roleDue(r,m)})),due=lines.reduce((a,l)=>a+l.x.due,0);
     const paid=p.filter(x=>x.person===person).reduce((a,x)=>a+(+x.amount||0),0),bal=due-paid;
@@ -811,19 +824,19 @@ function vMoney(){
   });
   h+=`</tbody></table></div></div>`;
   // payments log
-  if(p.length){h+=`<h2>Payments made <small>${rupee(paidTot)}</small></h2><div class="card">${p.slice().sort((a,b)=>a.date<b.date?1:-1).map(x=>`<div class="li" data-a="editPay" data-id="${x.id}"><div class="t"><b>${esc(x.person)}</b> · ${rupee(x.amount)}<small>${fmtDay(x.date)} · ${esc(x.mode||"")}${x.note?" · "+esc(x.note):""}${x.by?" · by "+esc(x.by):""}</small></div><span class="go">›</span></div>`).join("")}</div>`}
+  if(p.length){h+=`<h2><span class="hic" data-tone="noon" aria-hidden="true">💵</span>Payments made <small>${rupee(paidTot)}</small></h2><div class="card">${p.slice().sort((a,b)=>a.date<b.date?1:-1).map(x=>`<div class="li" data-a="editPay" data-id="${x.id}"><div class="t"><b>${esc(x.person)}</b> · ${rupee(x.amount)}<small>${fmtDay(x.date)} · ${esc(x.mode||"")}${x.note?" · "+esc(x.note):""}${x.by?" · by "+esc(x.by):""}</small></div><span class="go">›</span></div>`).join("")}</div>`}
   // bills
   const b=bills(m);
-  h+=`<h2>Shop bills & other spends <span class="sp"></span><button class="btn sm pri" data-a="bill">+ Add bill</button></h2><div class="card">`;
+  h+=`<h2><span class="hic" data-tone="dawn" aria-hidden="true">🧾</span>Shop bills & other spends <span class="sp"></span><button class="btn sm pri" data-a="bill">+ Add bill</button></h2><div class="card">`;
   if(!b.length) h+=`<p class="muted" style="margin:0">No bills yet this month. Add each bill from Dipankar, Sandip, Mini Bazaar, Raju Da, Dipti Medical and any other spend.</p>`;
   const bv=groupBy(b,x=>x.vendor);
   Object.keys(bv).forEach(v=>{const r=role(v)||{person:"Other",icon:"🧾"},arr=bv[v],sum=arr.reduce((a,x)=>a+(+x.amount||0),0),un=arr.filter(x=>!x.paid);
     h+=`<div class="li" data-a="vendorBills" data-v="${v}"><div class="av" style="width:36px;height:36px;font-size:18px">${r.icon}</div><div class="t"><b>${esc(r.person)}</b> · ${rupee(sum)}<small>${arr.length} bill${arr.length===1?"":"s"}${un.length?` · <span class="err">${rupee(un.reduce((a,x)=>a+(+x.amount||0),0))} unpaid</span>`:" · all paid"}</small></div><span class="go">›</span></div>`});
   h+=`</div>`;
   // budget
-  h+=`<h2>Budget <small>${fmtMonth(m)}</small><span class="sp"></span><button class="btn sm" data-a="budgets">Edit</button></h2><div class="card">`;
+  h+=`<h2><span class="hic" data-tone="gold" aria-hidden="true">🎯</span>Budget <small>${fmtMonth(m)}</small><span class="sp"></span><button class="btn sm" data-a="budgets">Edit</button></h2><div class="card">`;
   Object.keys(CATS).forEach(c=>{const v=sp[c],bb=+s.budgets[c]||0;if(!v&&!bb)return;
-    h+=`<div class="bud"><div class="l"><b>${CATS[c]}</b><span class="num">${rupee(v)}${bb?` / ${rupee(bb)}`:""}</span></div><div class="bar"><i class="${bb&&v>bb?"over":""}" style="width:${bb?Math.min(100,v/bb*100):(v?100:0)}%;${bb?"":"background:var(--ink-3)"}"></i></div></div>`});
+    h+=`<div class="bud" style="--cc:var(${CAT_COLOR[c]})"><div class="l"><b>${CATS[c]}</b><span class="num">${rupee(v)}${bb?` / ${rupee(bb)}`:""}</span></div><div class="bar"><i class="${bb&&v>bb?"over":""}" style="width:${bb?Math.min(100,v/bb*100):(v?100:0)}%;${bb&&v>bb?"":"background:var(--cc)"}"></i></div></div>`});
   if(!tot&&!bud) h+=`<p class="muted" style="margin:0">Set monthly budgets per category so the app can warn you when a category runs over.</p>`;
   h+=`</div>`;
   return h;
@@ -923,52 +936,52 @@ function vInsights(){
   if(rep.length) tips.push(["info","🥘",`Repeated a lot: ${rep.slice(0,3).map(([x,n])=>esc(dishLabel(x))+" ("+n+"×)").join(", ")}. Add new dishes in Setup for more variety.`]);
   if(!tips.length) tips.push(["good","🌟",bud||checked?"All looks on track this month.":"Not enough data yet. Review staff daily, log bills and set budgets – suggestions will appear here."]);
   const order={bad:0,warn:1,info:2,good:3};tips.sort((a,b)=>order[a[0]]-order[b[0]]);
-  h+=`<h2>Suggestions to run the home better</h2><div class="card">${tips.map(([c,i,t])=>`<div class="ins ${c}"><div class="ic">${i}</div><div>${t}</div></div>`).join("")}</div>`;
+  h+=`<h2><span class="hic" data-tone="gold" aria-hidden="true">💡</span>Suggestions to run the home better</h2><div class="card">${tips.map(([c,i,t])=>`<div class="ins ${c}"><div class="ic">${i}</div><div>${t}</div></div>`).join("")}</div>`;
   // 6-month chart
   const months=[5,4,3,2,1,0].map(i=>addMonths(m,-i)),data=months.map(x=>monthSpend(x)),max=Math.max(1,...data.map(d=>Object.values(d).reduce((a,b)=>a+b,0)));
   const usedCats=Object.keys(CATS).filter(c=>data.some(d=>d[c]>0));
-  h+=`<h2>Spending, last 6 months</h2><div class="card"><div class="chart">${months.map((x,i)=>{const d=data[i],sum=Object.values(d).reduce((a,b)=>a+b,0);
+  h+=`<h2><span class="hic" data-tone="day" aria-hidden="true">📊</span>Spending, last 6 months</h2><div class="card"><div class="chart">${months.map((x,i)=>{const d=data[i],sum=Object.values(d).reduce((a,b)=>a+b,0);
     return `<div class="col" title="${fmtMonth(x)}: ${rupee(sum)}"><span class="vl num">${sum?(sum>=1000?"₹"+(sum/1000).toFixed(sum>=1e5?0:1)+"k":rupee(sum)):""}</span><div class="stack" style="height:${sum/max*130}px">${usedCats.map(c=>d[c]?`<i style="height:${d[c]/sum*100}%;background:var(${CAT_COLOR[c]})" title="${CATS[c]}: ${rupee(d[c])}"></i>`:"").join("")}</div><span class="lb">${fmtMon(x)}</span></div>`}).join("")}</div>
     ${usedCats.length?`<div class="legend">${usedCats.map(c=>`<span><i style="background:var(${CAT_COLOR[c]})"></i>${CATS[c]}</span>`).join("")}</div>`:'<p class="muted" style="margin:8px 0 0">No spending recorded yet.</p>'}</div>`;
   // category table
-  h+=`<h2>Where the money went <small>${fmtMonth(m)}</small></h2><div class="card">${Object.keys(CATS).filter(c=>sp[c]||psp[c]).sort((a,b)=>sp[b]-sp[a]).map(c=>{const ch=psp[c]?(sp[c]-psp[c])/psp[c]:NaN;
+  h+=`<h2><span class="hic" data-tone="dawn" aria-hidden="true">🥧</span>Where the money went <small>${fmtMonth(m)}</small></h2><div class="card">${Object.keys(CATS).filter(c=>sp[c]||psp[c]).sort((a,b)=>sp[b]-sp[a]).map(c=>{const ch=psp[c]?(sp[c]-psp[c])/psp[c]:NaN;
     return `<div class="hbar"><span>${CATS[c]}</span><div class="bar"><i style="width:${tot?sp[c]/tot*100:0}%;background:var(${CAT_COLOR[c]})"></i></div><span class="num r" style="text-align:right;font-weight:700">${rupee(sp[c])}</span></div>
      <div class="faint" style="font-size:12px;margin:-4px 0 4px">${tot?pct(sp[c]/tot)+" of spend":""}${isFinite(ch)?` · ${ch>=0?"▲":"▼"} ${pct(Math.abs(ch))} vs ${fmtMon(pm)}`:""}</div>`}).join("")||'<p class="muted" style="margin:0">No spending recorded yet.</p>'}</div>`;
   // staff table
-  h+=`<h2>Staff performance</h2><div class="card"><div class="tscroll"><table class="t"><thead><tr><th>Staff</th><th class="r">Done well</th><th class="r">Days off</th><th class="r">Rating</th><th class="r">Reviewed</th></tr></thead><tbody>
+  h+=`<h2><span class="hic" data-tone="noon" aria-hidden="true">🏆</span>Staff performance</h2><div class="card"><div class="tscroll"><table class="t"><thead><tr><th>Staff</th><th class="r">Done well</th><th class="r">Days off</th><th class="r">Rating</th><th class="r">Reviewed</th></tr></thead><tbody>
    ${arr.map(o=>{const p=pss[o.r.id],d=p&&isFinite(p.rate)&&isFinite(o.rate)?o.rate-p.rate:NaN;
      return `<tr><td><b>${esc(o.r.person)}</b><small>${esc(o.r.title)}</small></td><td class="r num" style="color:${!isFinite(o.rate)?"var(--ink-3)":o.rate>=.9?"var(--good)":o.rate>=.75?"var(--warn)":"var(--bad)"};font-weight:800">${pct(o.rate)}${isFinite(d)&&Math.abs(d)>=.05?`<small>${d>0?"▲":"▼"} ${pct(Math.abs(d))}</small>`:""}</td>
      <td class="r num">${o.absent}</td><td class="r num">${isFinite(o.avgRating)?o.avgRating.toFixed(1)+" ★":"–"}</td><td class="r num">${o.revDays}/${o.days}</td></tr>`}).join("")}</tbody></table></div></div>`;
   // most missed
   const mm=[];arr.forEach(o=>Object.entries(o.missed).forEach(([k,n])=>mm.push([o.r,k,n])));mm.sort((a,b)=>b[2]-a[2]);
-  if(mm.length) h+=`<h2>Most often missed</h2><div class="card">${mm.slice(0,6).map(([r,k,n])=>`<div class="li" style="cursor:default"><div class="av" style="width:34px;height:34px;font-size:17px">${r.icon}</div><div class="t">${esc(k)}<small>${esc(r.person)} · ${esc(r.title)}</small></div><b class="num">${n}×</b></div>`).join("")}</div>`;
+  if(mm.length) h+=`<h2><span class="hic" data-tone="all" aria-hidden="true">🔁</span>Most often missed</h2><div class="card">${mm.slice(0,6).map(([r,k,n])=>`<div class="li" style="cursor:default"><div class="av" style="width:34px;height:34px;font-size:17px">${r.icon}</div><div class="t">${esc(k)}<small>${esc(r.person)} · ${esc(r.title)}</small></div><b class="num">${n}×</b></div>`).join("")}</div>`;
   return h;
 }
 
 /* ============ SETUP ============ */
 function vSetup(){
   const s=S();
-  let h=`<h1>Setup</h1><p class="sub">Staff, pay, tasks, dishes and budgets. Changes sync to the other phone when sync is on.</p>`;
-  h+=`<h2>Who uses the app</h2><div class="card"><div class="grid2">${s.users.map((u,i)=>`<div><label class="f" for="u${i}">Person ${i+1}</label><input class="in" id="u${i}" data-f="user" data-i="${i}" value="${esc(u)}"></div>`).join("")}</div>
+  let h=`<h1><span class="hic" data-tone="dusk" aria-hidden="true">⚙️</span>Setup</h1><p class="sub">Staff, pay, tasks, dishes and budgets. Changes sync to the other phone when sync is on.</p>`;
+  h+=`<h2><span class="hic" data-tone="dawn" aria-hidden="true">👪</span>Who uses the app</h2><div class="card"><div class="grid2">${s.users.map((u,i)=>`<div><label class="f" for="u${i}">Person ${i+1}</label><input class="in" id="u${i}" data-f="user" data-i="${i}" value="${esc(u)}"></div>`).join("")}</div>
    <label class="f" for="appr">Who approves the menu</label><select class="in" id="appr" data-f="approver">${s.users.map(u=>`<option${u===s.approver?" selected":""}>${esc(u)}</option>`).join("")}</select>
    <p class="muted" style="font-size:13px;margin:10px 0 0">This phone: <b>${esc(me()||"not chosen")}</b> · <a href="#" data-a="who">change</a></p></div>`;
   const groups=[["staff","Staff"],["supply","Daily supplies & services"],["vendor","Shops & vendors"]];
-  h+=`<h2>Staff & vendors <span class="sp"></span><button class="btn sm pri" data-a="newRole">+ Add</button></h2>`;
+  h+=`<h2><span class="hic" data-tone="day" aria-hidden="true">🧑‍🍳</span>Staff & vendors <span class="sp"></span><button class="btn sm pri" data-a="newRole">+ Add</button></h2>`;
   groups.forEach(([k,l])=>{const list=roles().filter(r=>r.kind===k);if(!list.length)return;
     h+=`<div class="card"><div class="grouplabel">${l}</div>${list.map(r=>`<div class="li" data-a="editRole" data-r="${r.id}"><div class="av" style="width:36px;height:36px;font-size:18px">${r.icon||"👤"}</div>
      <div class="t"><b>${esc(r.person)}</b> · ${esc(r.title)}${r.active===false?' <span class="chip">paused</span>':""}<small>${PAY[r.pay]||""}${r.pay!=="bill"?" · "+(+r.rate?rupee(r.rate)+(r.pay==="daily"?"/"+esc(r.unit||"unit"):r.pay==="trip"?"/trip":r.pay==="visit"?"/visit":"/month"):'<span class="err">rate not set</span>'):""}${r.kind==="staff"?` · ${(r.tasks||[]).length} tasks · ${r.days&&r.days.length<7?r.days.map(i=>WD[i]).join(" "):"every day"}`:""}</small></div><span class="go">›</span></div>`).join("")}</div>`});
-  h+=`<h2>Menu</h2><div class="card">
+  h+=`<h2><span class="hic" data-tone="dawn" aria-hidden="true">🍽️</span>Menu</h2><div class="card">
    <label class="f">Fish days (lunch has fish)</label>${dayChips(s.fishDays,"fish")}
    <label class="f">Days with paneer / egg / chicken at dinner</label>${dayChips(s.dinnerProteinDays,"dprot")}
    <div class="row" style="margin-top:12px"><label class="row" style="gap:8px;font-weight:600"><input type="checkbox" data-f="childMeal" ${s.childMeal?"checked":""}> Plan a separate child’s meal</label></div>
    <div class="row" style="margin-top:6px"><label class="row" style="gap:8px;font-weight:600"><input type="checkbox" data-f="staples" ${s.staples?"checked":""}> Include staples (rice, atta, dal, oil…) when making shopping lists from the menu</label></div>
    <div class="acts"><button class="btn" data-a="saveMenuSet">Save menu settings</button><button class="btn pri" data-a="dishes">Dish list (${dishes().length}) ›</button></div></div>`;
-  h+=`<h2>Pay rules</h2><div class="card"><div class="grid2"><div><label class="f" for="pl">Paid leaves per month (default)</label><input class="in num" id="pl" type="number" min="0" data-f="paidLeaves" value="${s.paidLeaves}"></div>
+  h+=`<h2><span class="hic" data-tone="dusk" aria-hidden="true">📋</span>Pay rules</h2><div class="card"><div class="grid2"><div><label class="f" for="pl">Paid leaves per month (default)</label><input class="in num" id="pl" type="number" min="0" data-f="paidLeaves" value="${s.paidLeaves}"></div>
    <div><label class="f">&nbsp;</label><label class="row" style="gap:8px;font-weight:600;min-height:40px"><input type="checkbox" data-f="deduct" ${s.deduct?"checked":""}> Cut pay for extra days off</label></div></div>
    <p class="muted" style="font-size:13px;margin:8px 0 0">Monthly staff: extra days off × (salary ÷ working days in the month). You can set a different leave allowance for each person.</p></div>`;
-  h+=`<h2>Monthly budget</h2><div class="card"><div class="grid2">${Object.keys(CATS).map(c=>`<div><label class="f" for="bg-${c}">${CATS[c]}</label><input class="in num" id="bg-${c}" type="number" inputmode="numeric" min="0" data-f="budget" data-c="${c}" value="${+s.budgets[c]||""}" placeholder="₹"></div>`).join("")}</div></div>`;
-  h+=`<h2 id="syncSec">Share between phones</h2><div class="card" id="syncBox">${syncHTML()}</div>`;
-  h+=`<h2>Backup</h2><div class="card"><p class="muted" style="margin:0 0 10px;font-size:14px">Save a copy of all data as a file, or restore from one.</p><div class="row"><button class="btn" data-a="export">⬇ Download backup</button><label class="btn" style="cursor:pointer">⬆ Restore backup<input type="file" accept="application/json,.json" data-f="import" hidden></label></div></div>`;
+  h+=`<h2><span class="hic" data-tone="gold" aria-hidden="true">🎯</span>Monthly budget</h2><div class="card"><div class="grid2">${Object.keys(CATS).map(c=>`<div><label class="f" for="bg-${c}">${CATS[c]}</label><input class="in num" id="bg-${c}" type="number" inputmode="numeric" min="0" data-f="budget" data-c="${c}" value="${+s.budgets[c]||""}" placeholder="₹"></div>`).join("")}</div></div>`;
+  h+=`<h2 id="syncSec"><span class="hic" data-tone="aqua" aria-hidden="true">🔄</span>Share between phones</h2><div class="card" id="syncBox">${syncHTML()}</div>`;
+  h+=`<h2><span class="hic" data-tone="noon" aria-hidden="true">💾</span>Backup</h2><div class="card"><p class="muted" style="margin:0 0 10px;font-size:14px">Save a copy of all data as a file, or restore from one.</p><div class="row"><button class="btn" data-a="export">⬇ Download backup</button><label class="btn" style="cursor:pointer">⬆ Restore backup<input type="file" accept="application/json,.json" data-f="import" hidden></label></div></div>`;
   h+=`<p class="faint" style="font-size:12px;text-align:center;margin:26px 0">Home Crew · data stays on this phone${sync.code?" and your shared family copy":""}</p>`;
   return h;
 }
@@ -991,7 +1004,7 @@ function paintRoleSheet(){
    ${r.kind!=="vendor"?`<div class="grid2"><div><label class="f" for="rTm">Timing</label><input class="in" id="rTm" value="${esc(r.time||"")}" placeholder="7:00 – 11:00"></div>
    ${r.kind==="staff"&&r.pay==="monthly"?`<div><label class="f" for="rL">Paid leaves / month</label><input class="in num" id="rL" type="number" min="0" value="${r.leaves!=null?esc(r.leaves):""}" placeholder="default ${S().paidLeaves}"></div>`:"<div></div>"}</div>
    <label class="f">Works on</label>${dayChips(r.days||ALL,"rdays")}`:""}
-   ${r.kind==="staff"?`<h2 style="margin-top:20px">Tasks <small>leave days blank = every work day</small></h2>
+   ${r.kind==="staff"?`<h2 style="margin-top:20px"><span class="hic" data-tone="day" aria-hidden="true">📝</span>Tasks <small>leave days blank = every work day</small></h2>
    ${(r.tasks||[]).map((t,i)=>`<div class="taskedit"><div class="row"><input class="in" data-f="tText" data-i="${i}" value="${esc(t.text)}"><button class="x" data-a="tRm" data-i="${i}" aria-label="Remove task">✕</button></div>
      <div style="margin-top:6px">${dayChips(t.days||[],"t"+i)}</div></div>`).join("")}
    <div class="addrow"><input class="in" id="tNew" placeholder="Add a task" data-enter="tAdd"><button class="btn" data-a="tAdd">Add</button></div>`:""}
