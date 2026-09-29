@@ -151,6 +151,11 @@ h1:has(.hic){display:flex;align-items:center;gap:4px}
 .quick::-webkit-scrollbar{display:none}
 .qbtn{flex:none;display:flex;flex-direction:column;align-items:center;gap:2px;width:84px;padding:8px 4px;border-radius:18px;border:2px solid var(--line);background:var(--paper);box-shadow:var(--shadow);font-size:12px;font-weight:800;line-height:1.1;color:var(--ink)}
 .qbtn span{font-size:24px;line-height:1.1}
+.seg.big{display:flex;width:100%}
+.seg.big button{flex:1;font-family:var(--display);font-weight:600;font-size:15.5px;min-height:40px}
+.seg.big button.on{background:var(--gold-tint);box-shadow:inset 0 0 0 2px var(--gold)}
+details.card summary::marker{color:var(--ink-3)}
+.vsel{border:0;background:var(--soft);border-radius:8px;padding:1px 4px;font:800 12px var(--body);color:var(--ink-2);max-width:150px;margin-right:2px}
 /* segmented */
 .seg{display:inline-flex;background:var(--soft);border-radius:16px;padding:3px;gap:2px;flex-wrap:wrap}
 .seg button{border:0;background:none;border-radius:13px;padding:5px 11px;font-size:13.5px;font-weight:800;color:var(--ink-2);min-height:32px}
@@ -445,13 +450,14 @@ const SEED_ROLES=[
   {id:"raju",title:"Fruits",person:"Raju Da",icon:"🍎",kind:"vendor",pay:"bill",cat:"fruit",tasks:[]},
   {id:"dipankar",title:"Vegetables",person:"Dipankar",icon:"🥬",kind:"vendor",pay:"bill",cat:"veg",tasks:[]},
   {id:"mini",title:"Grocery",person:"Mini Bazaar",icon:"🛍️",kind:"vendor",pay:"bill",cat:"grocery",tasks:[]},
-  {id:"dipti",title:"Medicine",person:"Dipti Medical",icon:"💊",kind:"vendor",pay:"bill",cat:"med",tasks:[]}
+  {id:"dipti",title:"Medicine",person:"Dipti Medical",icon:"💊",kind:"vendor",pay:"bill",cat:"med",tasks:[]},
+  {id:"rinki",title:"Dietician",person:"Rinki",icon:"🥗",kind:"vendor",pay:"bill",cat:"health",tasks:[]}
 ];
 const ITEM_SEED={
   dipankar:"Potato,Onion,Tomato,Cauliflower,Cabbage,Brinjal,Bottle gourd,Pumpkin,Okra,Spinach,Pointed gourd,Ridge gourd,Bitter gourd,Raw banana,Drumstick,Radish,Carrot,Beans,Capsicum,Green peas,Green chilli,Ginger,Garlic,Coriander leaves,Sweet corn,Lemon,Cucumber,Sweet potato,Mixed vegetables",
-  sandip:"Rohu fish,Katla fish,Pomfret,Hilsa,Pabda fish,Prawns,Tangra fish,Bhetki fish,Chicken,Paneer,Mushroom,Ghee,Chhana,Curd",
+  sandip:"Rohu fish,Katla fish,Pomfret,Hilsa,Pabda fish,Prawns,Tangra fish,Bhetki fish,Chicken,Paneer,Mushroom,Ghee,Chhana",
   raju:"Banana,Apple,Papaya,Seasonal fruit",
-  mini:"Eggs,Bread,Poha,Suji,Dalia,Maida,Atta,Rice,Masoor dal,Moong dal,Chana dal,Toor dal,Poppy seeds,Mustard oil,Mustard seeds,Besan,Soya chunks,Muri,Noodles,Coconut milk,Cashew,Ragi flour,Idli batter,Chire,Butter,Cheese,Tea,Sugar,Peanuts,Chickpeas",
+  mini:"Curd,Eggs,Bread,Poha,Suji,Dalia,Maida,Atta,Rice,Masoor dal,Moong dal,Chana dal,Toor dal,Poppy seeds,Mustard oil,Mustard seeds,Besan,Soya chunks,Muri,Noodles,Coconut milk,Cashew,Ragi flour,Idli batter,Chire,Butter,Cheese,Tea,Sugar,Peanuts,Chickpeas",
   milk:"Milk"
 };
 const STAPLES="Rice,Atta,Mustard oil,Sugar,Tea,Masoor dal,Moong dal,Toor dal,Chana dal,Maida,Suji,Besan,Poppy seeds,Mustard seeds".split(",");
@@ -494,17 +500,23 @@ const PAY_UPDATE_V2={ // pay & schedule the family gave on 29 Sep 2026
   driver:{pay:"bill",rate:0},milk:{pay:"daily",rate:30,unit:"day",qty:1},news:{rate:200},transport:{kind:"vendor",pay:"bill",rate:0}
 };
 function upgrade(){
-  const st=S();if((st.seedV||1)>=2)return;
+  let v=S().seedV||1;const v0=v;
+  if(v<2){upgradeV2();v=2}
+  if(v<3){const cat=items();if(cat.curd&&cat.curd.vendor==="sandip"&&!cat.curd.picked){cat.curd=Object.assign({},cat.curd,{vendor:"mini"});store.set("ghar-items",cat)}
+    if(!roles().some(r=>r.id==="rinki"))store.set("ghar-roles",roles().concat([JSON.parse(JSON.stringify(SEED_ROLES.find(r=>r.id==="rinki")))]));v=3}
+  if(v!==v0)store.set("ghar-settings",Object.assign({},S(),{seedV:v}));
+}
+function upgradeV2(){
   const list=roles().map(r=>{const p=PAY_UPDATE_V2[r.id];if(!p||+r.rate)return r;const n=Object.assign({},r,p);
     if(r.id==="vehicle")n.tasks=(r.tasks||[]).map(t=>t.id==="vehicle-3"&&t.days&&t.days.join()==="0"?Object.assign({},t,{days:[6]}):t);return n});
   if(!list.some(r=>r.id==="gym")){const g=SEED_ROLES.find(r=>r.id==="gym");const i=list.findIndex(r=>r.id==="driver");list.splice(i>=0?i+1:list.length,0,JSON.parse(JSON.stringify(g)))}
-  store.set("ghar-roles",list);store.set("ghar-settings",Object.assign({},S(),{seedV:2}));
+  store.set("ghar-roles",list);
 }
 function seed(){
   if(!store.get("ghar-roles")) store.set("ghar-roles",SEED_ROLES);
   if(!store.get("ghar-dishes")) store.set("ghar-dishes",SEED_DISHES);
   const st=store.get("ghar-settings");
-  if(!st) store.set("ghar-settings",Object.assign({},SEED_SETTINGS,{start:todayISO(),seedV:2}));
+  if(!st) store.set("ghar-settings",Object.assign({},SEED_SETTINGS,{start:todayISO(),seedV:3}));
   else if(!st.start) store.set("ghar-settings",Object.assign({},st,{start:todayISO()}));
   if(!store.get("ghar-items")){const m={};for(const v in ITEM_SEED) ITEM_SEED[v].split(",").forEach(n=>m[n.toLowerCase()]={name:n,vendor:v,staple:STAPLES.includes(n)});store.set("ghar-items",m)}
 }
@@ -672,7 +684,10 @@ function groupBy(a,f){const o={};a.forEach(x=>{const k=f(x);(o[k]=o[k]||[]).push
 
 /* ============ MENU ============ */
 function slotsOn(){return SLOTS.filter(s=>s.id!=="child"||S().childMeal)}
-function vMenu(){
+let menuMode="menu";
+function menuTabs(){return `<div class="seg big" role="tablist" style="margin-top:12px"><button role="tab" class="${menuMode==="menu"?"on":""}" data-a="menuMode" data-v="menu">🍽️ Weekly menu</button><button role="tab" class="${menuMode==="diet"?"on":""}" data-a="menuMode" data-v="diet">🥗 Diet chart</button></div>`}
+function vMenu(){return menuTabs()+(menuMode==="diet"?vDiet():vWeekMenu())}
+function vWeekMenu(){
   const w=curWeek,m=menuRec(w),t=todayISO(),s=S();
   let h=`<div class="datebar"><button class="iconbtn" data-a="week" data-n="-1" aria-label="Previous week">‹</button>
     <div class="d">Week of ${fmtDay(w)}<small>${fmtDay(w)} – ${fmtDay(addDays(w,6))}</small></div>
@@ -763,6 +778,228 @@ function paintSlotSheet(sl){
    <div class="acts"><button class="btn ghost" data-a="slotSuggest">✨ Suggest</button><button class="btn" data-a="close">Cancel</button><button class="btn pri" data-a="slotSave">Save</button></div>`);
 }
 
+/* ============ DIET CHART (Rinki) ============ */
+// name : vendor : other words used in charts (Hindi / Bengali / English)
+const DIET_WORDS=`Spinach:dipankar:palak|palong|spinach
+Methi leaves:dipankar:methi|methi leaves|fenugreek leaves|methi saag
+Bottle gourd:dipankar:lauki|lau|bottle gourd|doodhi|ghia
+Ridge gourd:dipankar:tori|turai|jhinge|ridge gourd
+Bitter gourd:dipankar:karela|korola|bitter gourd
+Pumpkin:dipankar:kaddu|kumro|pumpkin
+Cucumber:dipankar:kheera|khira|shasha|cucumber
+Tomato:dipankar:tamatar|tomato
+Onion:dipankar:pyaz|piyaz|onion
+Garlic:dipankar:lehsun|lasun|rasun|garlic
+Ginger:dipankar:adrak|ginger
+Carrot:dipankar:gajar|carrot
+Beetroot:dipankar:beetroot|beet|chukandar
+Broccoli:dipankar:broccoli
+Cabbage:dipankar:patta gobi|bandhakopi|cabbage
+Cauliflower:dipankar:phool gobi|gobi|phulkopi|cauliflower
+Capsicum:dipankar:shimla mirch|capsicum|bell pepper
+Beans:dipankar:french beans|beans|borboti
+Green peas:dipankar:matar|motorshuti|green peas|peas
+Okra:dipankar:bhindi|dherosh|okra|lady finger
+Brinjal:dipankar:baingan|begun|brinjal|eggplant
+Sweet potato:dipankar:shakarkandi|ranga alu|sweet potato
+Potato:dipankar:aloo|alu|potato
+Lettuce:dipankar:lettuce
+Zucchini:dipankar:zucchini
+Drumstick:dipankar:sajna|sojne|moringa|drumstick
+Raw banana:dipankar:kacha kola|raw banana|kachkola
+Radish:dipankar:mooli|mulo|radish
+Coriander leaves:dipankar:dhania|dhone pata|coriander
+Mint leaves:dipankar:pudina|mint
+Curry leaves:dipankar:kadi patta|curry leaves|curry patta
+Lemon:dipankar:nimbu|lebu|lemon|lime
+Green chilli:dipankar:hari mirch|green chilli|green chili|kancha lanka
+Sprouts:dipankar:sprouts|sprouted
+Sweet corn:dipankar:sweet corn|corn|bhutta
+Spring onion:dipankar:spring onion|pyazkoli
+Celery:dipankar:celery
+Apple:raju:apple|seb
+Banana:raju:banana|kela
+Papaya:raju:papaya|papita|pepe
+Orange:raju:orange|santra|komla|mosambi|sweet lime
+Pomegranate:raju:pomegranate|anar|bedana
+Guava:raju:guava|amrud|peyara
+Watermelon:raju:watermelon|tarbooj|tormuj
+Muskmelon:raju:muskmelon|kharbuja|kharbooja
+Pear:raju:pear|nashpati
+Grapes:raju:grapes|angoor|angur
+Kiwi:raju:kiwi
+Mango:raju:mango|aam
+Pineapple:raju:pineapple|ananas
+Amla:raju:amla|gooseberry
+Berries:raju:strawberry|strawberries|blueberry|blueberries|berries
+Coconut water:raju:coconut water|daab|tender coconut
+Seasonal fruit:raju:seasonal fruit|fruits|fruit
+Paneer:sandip:paneer|cottage cheese
+Tofu:mini:tofu
+Mushroom:sandip:mushroom
+Ghee:sandip:ghee
+Chicken:sandip:chicken breast|chicken
+Fish:sandip:fish|machh|rohu|katla|bhetki|pomfret|salmon
+Prawns:sandip:prawn|chingri
+Curd:mini:curd|dahi|doi|yogurt|yoghurt|greek yogurt|raita
+Buttermilk:mini:buttermilk|chaas|chhach|ghol
+Milk:milk:milk|doodh|dudh|toned milk|skimmed milk
+Eggs:mini:egg white|egg whites|eggs|egg|anda|boiled egg
+Oats:mini:oats|oatmeal|rolled oats
+Muesli:mini:muesli
+Quinoa:mini:quinoa
+Brown rice:mini:brown rice
+Rice:mini:rice|chawal|bhaat|bhat
+Poha:mini:poha|chire|chura|flattened rice
+Suji:mini:suji|sooji|rava|rawa|semolina|upma
+Dalia:mini:dalia|daliya|broken wheat|porridge
+Multigrain atta:mini:multigrain atta|multigrain flour|multigrain roti
+Atta:mini:atta|wheat flour|roti|chapati|chapatti|phulka|ruti
+Ragi flour:mini:ragi|nachni|finger millet
+Jowar:mini:jowar
+Bajra:mini:bajra
+Millets:mini:millet|millets
+Besan:mini:besan|gram flour|chilla|cheela
+Moong dal:mini:moong dal|moong|mung|green gram
+Masoor dal:mini:masoor|musur
+Toor dal:mini:toor|arhar|tur dal
+Chana dal:mini:chana dal|cholar dal
+Chickpeas:mini:kabuli chana|chickpeas|chickpea|chole|chana
+Black chana:mini:kala chana|black chana
+Rajma:mini:rajma|kidney beans
+Soya chunks:mini:soya chunks|soya|soyabean|soybean
+Sattu:mini:sattu
+Makhana:mini:makhana|fox nut|fox nuts|lotus seeds
+Almonds:mini:almonds|almond|badam
+Walnuts:mini:walnuts|walnut|akhrot
+Cashew:mini:cashew|kaju
+Raisins:mini:raisins|raisin|kishmish
+Dates:mini:dates|khajur|khejur
+Figs:mini:anjeer|figs|fig
+Flax seeds:mini:flax seeds|flaxseed|flax|alsi
+Chia seeds:mini:chia seeds|chia
+Pumpkin seeds:mini:pumpkin seeds
+Sunflower seeds:mini:sunflower seeds
+Sesame seeds:mini:sesame|til
+Peanuts:mini:peanuts|peanut|moongphali|chinabadam
+Peanut butter:mini:peanut butter
+Honey:mini:honey|shahad|madhu
+Jaggery:mini:jaggery|gur|gud
+Green tea:mini:green tea
+Tea:mini:tea|chai
+Coffee:mini:black coffee|coffee
+Olive oil:mini:olive oil
+Mustard oil:mini:mustard oil|sarson
+Coconut oil:mini:coconut oil
+Rice bran oil:mini:rice bran oil
+Brown bread:mini:brown bread|multigrain bread|whole wheat bread
+Bread:mini:bread|toast
+Idli batter:mini:idli|dosa
+Coconut:mini:coconut|nariyal|narkel
+Turmeric:mini:haldi|turmeric
+Cumin:mini:jeera|cumin
+Cinnamon:mini:dalchini|cinnamon
+Black pepper:mini:kali mirch|black pepper
+Fenugreek seeds:mini:methi seeds|methi dana|fenugreek seeds
+Ajwain:mini:ajwain|carom
+Vermicelli:mini:vermicelli|seviyan|semai
+Cornflakes:mini:cornflakes|corn flakes`.split("\n").map(l=>{const [n,v,w]=l.split(":");return {n,v,w:w.split("|")}});
+const AVOID_RE=/\b(avoid|avoided|not allowed|restrict|restricted|don'?t|do not|no more|stop|skip|limit)\b/i;
+function dietMatch(text){ // returns [{n,v,ctx}] – longest words first, "avoid" lines skipped
+  const cat=items(),terms=[];
+  DIET_WORDS.forEach(d=>d.w.forEach(w=>terms.push([w.toLowerCase(),d])));
+  Object.values(cat).forEach(i=>{if(!DIET_WORDS.some(d=>d.n.toLowerCase()===i.name.toLowerCase()))terms.push([i.name.toLowerCase(),{n:i.name,v:i.vendor}])});
+  terms.sort((a,b)=>b[0].length-a[0].length);
+  const found=new Map();
+  text.split(/\n+/).forEach(line=>{
+    if(!line.trim()||AVOID_RE.test(line))return;
+    let work=" "+line.toLowerCase()+" ";
+    terms.forEach(([w,d])=>{
+      const re=new RegExp("(^|[^a-z])("+w.replace(/[.*+?^${}()|[\]\\]/g,"\\/* ============ SHOPPING ============ */")+")(e?s)?(?=[^a-z]|$)","g");
+      if(re.test(work)){work=work.replace(re,(m0,p1)=>p1+" ".repeat(m0.length-p1.length));
+        if(!found.has(d.n))found.set(d.n,{n:d.n,v:pickVendor(d.n,d.v),ctx:line.trim().slice(0,90)})}
+    });
+  });
+  return [...found.values()];
+}
+async function unzipEntry(buf,want){ // minimal .zip reader (a .docx is a zip)
+  const dv=new DataView(buf.buffer,buf.byteOffset,buf.byteLength);let e=-1;
+  for(let i=buf.length-22;i>=Math.max(0,buf.length-65557);i--){if(dv.getUint32(i,true)===0x06054b50){e=i;break}}
+  if(e<0)throw new Error("This isn’t a Word .docx file.");
+  const n=dv.getUint16(e+10,true);let p=dv.getUint32(e+16,true);
+  for(let k=0;k<n;k++){
+    const method=dv.getUint16(p+10,true),size=dv.getUint32(p+20,true),nl=dv.getUint16(p+28,true),el=dv.getUint16(p+30,true),cl=dv.getUint16(p+32,true),lo=dv.getUint32(p+42,true);
+    const name=new TextDecoder().decode(buf.subarray(p+46,p+46+nl));
+    if(name===want){const start=lo+30+dv.getUint16(lo+26,true)+dv.getUint16(lo+28,true),data=buf.subarray(start,start+size);
+      if(method===0)return new TextDecoder().decode(data);
+      if(method===8){const out=await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer();return new TextDecoder().decode(out)}
+      throw new Error("This Word file uses an unusual format.")}
+    p+=46+nl+el+cl;
+  }
+  throw new Error("No text found inside this Word file.");
+}
+function docxXmlToText(xml){
+  const doc=new DOMParser().parseFromString(xml,"application/xml"),W="http://schemas.openxmlformats.org/wordprocessingml/2006/main",lines=[];
+  const pText=p=>{let t="";for(const el of p.getElementsByTagNameNS(W,"*")){const n=el.localName;if(n==="t")t+=el.textContent;else if(n==="tab")t+=" ";else if(n==="br"||n==="cr")t+=" "}return t.replace(/\s+/g," ").trim()};
+  const walk=node=>{for(const el of node.children){
+    if(el.localName==="p"){const t=pText(el);if(t)lines.push(t)}
+    else if(el.localName==="tbl"){for(const tr of el.children){if(tr.localName!=="tr")continue;const cells=[...tr.children].filter(c=>c.localName==="tc").map(tc=>[...tc.getElementsByTagNameNS(W,"p")].map(pText).filter(Boolean).join(" "));if(cells.some(Boolean))lines.push(cells.join(" | "))}}
+    else walk(el)}};
+  const body=doc.getElementsByTagNameNS(W,"body")[0];if(body)walk(body);
+  return lines.join("\n");
+}
+async function readDietFile(file){
+  const nm=file.name.toLowerCase();
+  if(nm.endsWith(".txt"))return file.text();
+  if(nm.endsWith(".doc"))throw new Error("This is an old .doc file. Open it in Word and “Save As” .docx – or copy the text and paste it below.");
+  if(!nm.endsWith(".docx"))throw new Error("Please choose the Word (.docx) file Rinki sent – or paste the text below.");
+  return docxXmlToText(await unzipEntry(new Uint8Array(await file.arrayBuffer()),"word/document.xml"));
+}
+const diets=()=>store.get("ghar-diet")||[];
+let dietSel="";
+function curDiet(){const d=diets();return d.find(x=>x.id===dietSel)||d[0]||null}
+function saveDiet(p){const list=diets().filter(x=>x.id!==p.id);list.unshift(p);store.set("ghar-diet",list.slice(0,12))}
+function newDiet(name,text){
+  const p={id:uid(),name:name||"Diet chart",from:"Rinki",for:"Family",added:todayISO(),by:me(),text,items:dietMatch(text).map(x=>Object.assign(x,{st:"",q:""})),checkWith:"Khala"};
+  saveDiet(p);dietSel=p.id;return p;
+}
+function dietShareText(p){
+  const need=p.items.filter(i=>i.st==="need"),by=groupBy(need,i=>i.v);
+  return `🥗 ${p.from}’s diet chart – to buy (${fmtDay(todayISO())})\n`+Object.keys(by).map(v=>{const r=role(v)||{person:"Other",icon:"🛒"};
+    return `\n${r.icon} ${r.person}:\n`+by[v].map(i=>"• "+i.n+(i.q?" – "+i.q:"")).join("\n")}).join("\n");
+}
+function vDiet(){
+  const p=curDiet(),all=diets();
+  let h=`<div class="card" style="margin-top:12px"><div class="row" style="gap:12px;align-items:flex-start"><div class="av" style="background:var(--noon-tint)">🥗</div><div style="flex:1;min-width:200px"><b style="font-family:var(--display);font-size:19px">Rinki’s diet chart</b>
+    <p class="muted" style="margin:2px 0 10px;font-size:14px">Save the Word file from WhatsApp, then upload it here. The app lists the ingredients, you check the pantry with Khala or Asha, and whatever’s missing goes to the right shop.</p>
+    <div class="row"><label class="btn pri" style="cursor:pointer">⬆ Upload Word file<input type="file" accept=".docx,.doc,.txt,application/vnd.openxmlformats-officedocument.wordprocessingml.document" data-f="dietFile" hidden></label>
+    <button class="btn" data-a="dietPasteOpen">📋 Paste text instead</button></div></div></div>
+    <div id="dietPaste" hidden style="margin-top:12px"><textarea class="in" id="dietPasteTxt" style="min-height:120px" placeholder="Paste the diet chart text here (from WhatsApp or Word)"></textarea><div class="row" style="justify-content:flex-end;margin-top:8px"><button class="btn pri" data-a="dietPasteGo">Find ingredients</button></div></div></div>`;
+  if(!p) return h+`<p class="muted" style="text-align:center;margin:28px 0">No diet chart yet.</p>`;
+  const need=p.items.filter(i=>i.st==="need"),have=p.items.filter(i=>i.st==="have"),open=p.items.filter(i=>!i.st);
+  if(all.length>1) h+=`<label class="f" for="dietPick">Chart</label><select class="in" id="dietPick" data-f="dietPick">${all.map(x=>`<option value="${x.id}"${x.id===p.id?" selected":""}>${esc(x.name)} · ${fmtDay(x.added)}</option>`).join("")}</select>`;
+  h+=`<h2><span class="hic" data-tone="noon" aria-hidden="true">📄</span>${esc(p.name)} <small>${fmtDay(p.added)}</small><span class="sp"></span><button class="btn sm ghost bad" data-a="dietDel">Delete</button></h2>`;
+  h+=`<div class="summary"><div class="stat"><b class="num">${p.items.length}</b><span>ingredients found</span></div><div class="stat"><b class="num">${have.length}</b><span>in the pantry</span></div><div class="stat"><b class="num">${need.length}</b><span>to buy</span></div></div>`;
+  h+=`<div class="card"><div class="row"><b style="font-family:var(--display);font-size:17px">Check the pantry with</b><div class="seg">${["Khala","Asha"].map(n=>`<button class="${p.checkWith===n?"on":""}" data-a="dietWith" data-v="${n}">${n}</button>`).join("")}</div>
+    <span class="sp"></span><label class="row" style="gap:6px;font-size:13.5px;font-weight:800;color:var(--ink-2)">For <input class="in" style="width:120px;min-height:34px;padding:4px 8px" data-f="dietFor" value="${esc(p.for||"")}"></label></div>
+    <p class="muted" style="font-size:13.5px;margin:8px 0 4px">Go through the list with ${esc(p.checkWith)}: ✓ if it’s in the pantry, 🛒 if we need to buy it. Remove anything that isn’t really an ingredient.</p>
+    ${open.length?`<div class="row" style="margin:6px 0"><button class="btn sm" data-a="dietAllHave">✓ Mark the rest as “have”</button><span class="faint" style="font-size:12.5px">${open.length} not checked yet</span></div>`:""}
+    <ul class="tasks">${p.items.map((i,k)=>`<li><div class="tx">${esc(i.n)}<small><select class="vsel" data-f="dietVend" data-i="${k}" aria-label="Shop for ${esc(i.n)}">${shopRoles().map(r=>`<option value="${r.id}"${r.id===i.v?" selected":""}>${r.icon} ${esc(r.person)}</option>`).join("")}</select>${i.ctx?" · “"+esc(i.ctx)+"”":""}</small></div>
+      ${i.st==="need"?`<input class="in q" style="width:78px;min-height:34px;padding:4px 8px" placeholder="qty" value="${esc(i.q||"")}" data-f="dietQty" data-i="${k}" aria-label="Quantity">`:""}
+      <div class="tri"><button class="${i.st==="have"?"on g":""}" data-a="dietSt" data-i="${k}" data-v="have" title="In the pantry" aria-label="Have it">✓</button><button class="${i.st==="need"?"on w":""}" data-a="dietSt" data-i="${k}" data-v="need" title="Need to buy" aria-label="Need to buy">🛒</button><button data-a="dietRm" data-i="${k}" title="Not an ingredient" aria-label="Remove">✕</button></div></li>`).join("")}</ul>
+    <div class="addrow"><input class="in" id="dietNew" placeholder="Add an ingredient the app missed" data-enter="dietAdd" list="itemNames2"><button class="btn" data-a="dietAdd">Add</button></div>
+    <datalist id="itemNames2">${DIET_WORDS.map(d=>`<option value="${esc(d.n)}">`).join("")}</datalist>
+    <div class="foot row">${p.checkedBy?`<span class="reviewed">✓ Pantry checked with ${esc(p.checkedWith||p.checkWith)} by ${esc(p.checkedBy)} · ${fmtTime(p.checkedAt)}</span>`:`<span class="muted" style="font-size:13.5px">When done, confirm the check.</span>`}<span class="sp"></span><button class="btn ${p.checkedBy?"ghost":"pri"}" data-a="dietConfirm">${p.checkedBy?"Check again":"Confirm pantry check"}</button></div></div>`;
+  h+=`<h2><span class="hic" data-tone="gold" aria-hidden="true">🛒</span>To buy <small>${need.length} item${need.length===1?"":"s"}</small></h2><div class="card">`;
+  if(!need.length) h+=`<p class="muted" style="margin:0">Nothing to buy yet – mark items with 🛒 above.</p>`;
+  else{const by=groupBy(need,i=>i.v);
+    h+=Object.keys(by).map(v=>{const r=role(v)||{person:"Other",icon:"🛒"};return `<div class="sup"><div class="av">${r.icon}</div><div class="t"><b>${esc(r.person)}</b><small>${by[v].map(i=>esc(i.n)+(i.q?" – "+esc(i.q):"")).join(", ")}</small></div></div>`}).join("");
+    h+=`<div class="acts" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:12px"><button class="btn" data-a="dietCopy">📋 Copy list</button><button class="btn" data-a="dietToShop">+ Add to shopping list</button><button class="btn pri" data-a="dietShare">💬 Post on WhatsApp</button></div>`;}
+  h+=`</div><details class="card"><summary style="cursor:pointer;font-weight:800">See the chart text</summary><pre style="white-space:pre-wrap;font:600 13.5px/1.45 var(--body);margin:10px 0 0">${esc(p.text)}</pre></details>`;
+  return h;
+}
+function editDiet(fn){const p=JSON.parse(JSON.stringify(curDiet()));fn(p);saveDiet(p);render()}
+
 /* ============ SHOPPING ============ */
 function vShop(){
   const list=shop(),cutoff=addDays(todayISO(),-7);
@@ -782,7 +1019,7 @@ function vShop(){
     h+=`<section class="card vend"><div class="vh"><span style="font-size:20px">${r.icon}</span><b>${esc(r.person)} <span class="faint" style="font-weight:600">${esc(r.title)}</span></b>
       ${need?`<button class="btn sm" data-a="sendList" data-v="${v}">Send list (${need})</button>`:""}</div>`;
     arr.forEach(i=>{
-      h+=`<div class="item ${i.status}"><div class="nm"><span>${esc(i.name)}</span>${i.for?`<small>for ${esc(i.for)}</small>`:""}${i.status==="got"?`<small>Received ${fmtDay(i.gotOn)} · ${i.check==="issue"?'<span class="err">quality issue</span>':"quality OK"}</small>`:""}</div>
+      h+=`<div class="item ${i.status}"><div class="nm"><span>${esc(i.name)}</span>${i.status!=="got"?`<small><select class="vsel" data-f="shopVend" data-id="${i.id}" aria-label="Shop">${shopRoles().map(r=>`<option value="${r.id}"${r.id===i.vendor?" selected":""}>${r.icon} ${esc(r.person)}</option>`).join("")}</select>${i.for?" · for "+esc(i.for):""}</small>`:(i.for?`<small>for ${esc(i.for)}</small>`:"")}${i.status==="got"?`<small>Received ${fmtDay(i.gotOn)} · ${i.check==="issue"?'<span class="err">quality issue</span>':"quality OK"}</small>`:""}</div>
        ${i.status!=="got"?`<input class="in q" placeholder="qty" value="${esc(i.qty||"")}" data-f="qty" data-id="${i.id}" aria-label="Quantity">`:""}
        ${i.status==="got"?`<button class="stbtn ${i.check==="issue"?"ordered":"got"}" data-a="qc" data-id="${i.id}">${i.check==="issue"?"⚠ Issue":"✓ OK"}</button>`:`<button class="stbtn ${i.status}" data-a="st" data-id="${i.id}">${i.status==="need"?"To order":"Ordered"}</button>`}
        <button class="x" data-a="rmItem" data-id="${i.id}" aria-label="Remove">✕</button></div>`});
@@ -801,7 +1038,23 @@ function addShopItem(name,vendor,forTxt,qty){
   const cat=items();if(!cat[key]){cat[key]={name:name.trim(),vendor,staple:false};store.set("ghar-items",cat)}
   return true;
 }
-function itemVendor(name){const i=items()[name.toLowerCase()];return i?i.vendor:"mini"}
+// Which shop should an item go to? 1) what the family chose before, 2) a shop whose job names the item
+// (Sandip: "Fish, Paneer, Mushroom, Ghee"), 3) the usual shop for that kind of item, 4) the grocery shop.
+const HINT_CAT={dipankar:"veg",raju:"fruit",sandip:"fish",milk:"milk",mini:"grocery",dipti:"med"};
+function shopRoles(){return roles().filter(r=>r.active!==false&&(r.kind==="vendor"||r.id==="milk")&&r.cat!=="transport")}
+function pickVendor(name,hint){
+  const key=(name||"").trim().toLowerCase(),shops=shopRoles(),ok=id=>shops.some(r=>r.id===id);
+  const learned=items()[key];if(learned&&learned.picked&&ok(learned.vendor))return learned.vendor;
+  const sing=key.replace(/(es|s)$/,"");
+  const named=shops.find(r=>r.title.toLowerCase().split(/[^a-z]+/).some(w=>w&&(w===key||w===sing||w.replace(/(es|s)$/,"")===sing)));
+  if(named)return named.id;
+  if(learned&&ok(learned.vendor))return learned.vendor;
+  if(hint&&ok(hint))return hint;
+  const cat=HINT_CAT[hint];const same=cat&&shops.find(r=>r.cat===cat);if(same)return same.id;
+  const groc=shops.find(r=>r.cat==="grocery");return groc?groc.id:(shops[0]||{}).id||"mini";
+}
+function learnVendor(name,vendor){const cat=items(),k=name.trim().toLowerCase();cat[k]=Object.assign({name:name.trim(),staple:false},cat[k]||{},{vendor,picked:true});store.set("ghar-items",cat)}
+function itemVendor(name){return pickVendor(name)}
 function splitQty(txt){const m=txt.match(/^(.*?)\s+(\d[\d.,]*\s*(?:kg|g|gm|l|ltr|litre|ml|pc|pcs|pkt|dozen|doz|bunch|nos|x\d+)?\.?)$/i);return m?[m[1],m[2]]:[txt,""]}
 
 /* ============ MONEY ============ */
@@ -1122,13 +1375,28 @@ const A={
     c.list=coursesFor(c.slot,c.d).map(g=>{const opts=all.filter(x=>x.group===g&&!inWeek.has(x.id));const pool=opts.length?opts:all.filter(x=>x.group===g);return pool.length?pool[Math.floor(Math.random()*pool.length)].id:null}).filter(Boolean);
     paintSlotSheet(SLOTS.find(x=>x.id===c.slot))},
   slotSave:()=>{const c=sheetCtx,w=mondayOf(c.d),m=JSON.parse(JSON.stringify(menuRec(w)));m.days[c.d]=m.days[c.d]||{};m.days[c.d][c.slot]=c.list.filter(Boolean);menuEdited(w,m);closeSheet();render()},
+  // diet chart
+  menuMode:e=>{menuMode=e.dataset.v;render()},
+  dietPasteOpen:()=>{const b=$("dietPaste");b.hidden=!b.hidden;if(!b.hidden)$("dietPasteTxt").focus()},
+  dietPasteGo:()=>{const t=$("dietPasteTxt").value.trim();if(!t){toast("Paste the chart text first");return}const p=newDiet("Diet chart (pasted)",t);render();toast(p.items.length+" ingredients found")},
+  dietSt:e=>editDiet(p=>{const i=p.items[+e.dataset.i];i.st=i.st===e.dataset.v?"":e.dataset.v}),
+  dietRm:e=>editDiet(p=>{p.items.splice(+e.dataset.i,1)}),
+  dietAllHave:()=>editDiet(p=>p.items.forEach(i=>{if(!i.st)i.st="have"})),
+  dietAdd:()=>{const v=$("dietNew").value.trim();if(!v)return;const d=DIET_WORDS.find(x=>x.n.toLowerCase()===v.toLowerCase()),cat=items()[v.toLowerCase()];
+    editDiet(p=>{if(!p.items.some(i=>i.n.toLowerCase()===v.toLowerCase()))p.items.push({n:d?d.n:v,v:pickVendor(d?d.n:v,d&&d.v),st:"need",q:"",ctx:"added by hand"})});setTimeout(()=>$("dietNew")&&$("dietNew").focus(),0)},
+  dietWith:e=>editDiet(p=>{p.checkWith=e.dataset.v}),
+  dietConfirm:()=>{if(!me())return whoSheet();editDiet(p=>{p.checkedBy=me();p.checkedAt=Date.now();p.checkedWith=p.checkWith});toast("Pantry check saved")},
+  dietDel:()=>{const p=curDiet();if(!p||!confirm("Delete “"+p.name+"”?"))return;store.set("ghar-diet",diets().filter(x=>x.id!==p.id));dietSel="";render()},
+  dietToShop:()=>{const p=curDiet();let n=0;p.items.filter(i=>i.st==="need").forEach(i=>{if(addShopItem(i.n,i.v,p.from+"’s diet",i.q))n++});render();toast(n?n+" added – send them from Shopping":"Already on the shopping list")},
+  dietCopy:()=>{const t=dietShareText(curDiet());navigator.clipboard?navigator.clipboard.writeText(t).then(()=>toast("List copied – paste it in WhatsApp")):prompt("Copy this list",t)},
+  dietShare:()=>{window.open("https://wa.me/?text="+encodeURIComponent(dietShareText(curDiet())),"_blank")},
   // shopping
   fromMenu:e=>{const w=addDays(mondayOf(todayISO()),7*+e.dataset.n),m=menuRec(w),s=S(),cat=items();
     const need={};weekDays(w).forEach(d=>{const day=m.days[d]||{};for(const sl in day)(day[sl]||[]).forEach(x=>{const di=dish(x);if(!di)return;di.ings.forEach(n=>{n=n.trim();if(!n)return;const it=cat[n.toLowerCase()];if(it&&it.staple&&!s.staples)return;if(itemVendor(n)==="milk")return;(need[n]=need[n]||new Set()).add(WD[dow(d)])})})});
     const names=Object.keys(need);if(!names.length){toast("No menu for that week yet");return}
     let added=0;names.forEach(n=>{if(addShopItem(n,itemVendor(n),[...need[n]].join(" ")))added++});
     render();toast(`${added} item${added===1?"":"s"} added${m.status!=="approved"?" (menu not approved yet)":""}`)},
-  addItem:()=>{const inp=$("newItem"),raw=inp.value.trim();if(!raw)return;const [n,q]=splitQty(raw);const known=items()[n.toLowerCase()],sel=$("newVend"),v=known&&!sel.dataset.touched?known.vendor:sel.value;
+  addItem:()=>{const inp=$("newItem"),raw=inp.value.trim();if(!raw)return;const [n,q]=splitQty(raw);const sel=$("newVend"),v=sel.dataset.touched?sel.value:pickVendor(n);if(sel.dataset.touched)learnVendor(n,v);
     if(!addShopItem(n,v,"",q))toast("Already on the list");render();setTimeout(()=>$("newItem")&&$("newItem").focus(),0)},
   st:e=>{const list=shop().map(i=>{if(i.id!==e.dataset.id)return i;const n=Object.assign({},i);if(i.status==="need")n.status="ordered";else{n.status="got";n.gotOn=todayISO();n.check="ok"}return n});store.set("ghar-shop",list);render()},
   qc:e=>{const list=shop().map(i=>i.id===e.dataset.id?Object.assign({},i,{check:i.check==="issue"?"ok":"issue"}):i);store.set("ghar-shop",list);render()},
@@ -1209,6 +1477,8 @@ document.addEventListener("input",ev=>{
   if(f==="sugg"){clearTimeout(inputT);const rid=e.dataset.r,v=e.value,d=curDate;inputT=setTimeout(()=>editDay(d,r=>{r.sugg=r.sugg||{};if(v.trim())r.sugg[rid]=v;else delete r.sugg[rid]}),400)}
   else if(f==="dayNote"){clearTimeout(inputT);const v=e.value,d=curDate;inputT=setTimeout(()=>editDay(d,r=>{r.note=v}),400)}
   else if(f==="qty"){clearTimeout(inputT);const id=e.dataset.id,v=e.value;inputT=setTimeout(()=>store.set("ghar-shop",shop().map(i=>i.id===id?Object.assign({},i,{qty:v}):i)),400)}
+  else if(f==="dietQty"){clearTimeout(inputT);const k=+e.dataset.i,v=e.value;inputT=setTimeout(()=>{const p=JSON.parse(JSON.stringify(curDiet()));p.items[k].q=v;saveDiet(p)},400)}
+  else if(f==="dietFor"){clearTimeout(inputT);const v=e.value;inputT=setTimeout(()=>{const p=JSON.parse(JSON.stringify(curDiet()));p.for=v;saveDiet(p)},500)}
   else if(f==="slotCustom"){sheetCtx.list[+e.dataset.i]="#"+e.value}
   else if(f==="budget"){clearTimeout(inputT);const c=e.dataset.c,v=+e.value||0;inputT=setTimeout(()=>{const s=S();s.budgets=Object.assign({},s.budgets,{[c]:v});store.set("ghar-settings",s)},400)}
   else if(f==="user"){clearTimeout(inputT);const i=+e.dataset.i,v=e.value.trim();inputT=setTimeout(()=>{if(!v)return;const s=S(),old=s.users[i];s.users=s.users.slice();s.users[i]=v;if(s.approver===old)s.approver=v;store.set("ghar-settings",s);if(me()===old)local("me",v);$("whoName").textContent=me()||"Who?"},600)}
@@ -1221,6 +1491,11 @@ document.addEventListener("change",ev=>{
   if(f==="slotDish"){sheetCtx.list[+e.dataset.i]=e.value}
   else if(f==="slotAdd"){if(e.value){sheetCtx.list.push(e.value);paintSlotSheet(SLOTS.find(x=>x.id===sheetCtx.slot))}}
   else if(f==="bVend"){const r=role(e.value);if(r&&r.cat){sheetCtx.cat=r.cat;[...$("bCats").children].forEach(b=>b.classList.toggle("on",b.dataset.c===r.cat))}}
+  else if(f==="dietVend"){const k=+e.dataset.i,p=JSON.parse(JSON.stringify(curDiet()));p.items[k].v=e.value;learnVendor(p.items[k].n,e.value);saveDiet(p);render();toast("Got it – "+p.items[k].n+" will go to "+role(e.value).person+" from now on")}
+  else if(f==="shopVend"){const id=e.dataset.id,list=shop().map(i=>i.id===id?Object.assign({},i,{vendor:e.value}):i),it=list.find(i=>i.id===id);store.set("ghar-shop",list);if(it)learnVendor(it.name,e.value);render()}
+  else if(f==="dietPick"){dietSel=e.value;render()}
+  else if(f==="dietFile"){const file=e.files[0];if(!file)return;toast("Reading “"+file.name+"”…");
+    readDietFile(file).then(t=>{if(!t.trim())throw new Error("The file has no text in it.");const p=newDiet(file.name.replace(/\.(docx?|txt)$/i,""),t);render();toast(p.items.length+" ingredients found")}).catch(x=>alert("Couldn’t read the file: "+x.message))}
   else if(f==="approver"){const s=S();s.approver=e.value;store.set("ghar-settings",s);toast(e.value+" approves the menu")}
   else if(f==="childMeal"||f==="staples"||f==="deduct"){const s=S();s[f]=e.checked;store.set("ghar-settings",s);toast("Saved")}
   else if(f==="rKind"||f==="rPay"){captureRole();const r=sheetCtx.r;if(f==="rKind"&&r.kind==="vendor")r.pay="bill";if(f==="rPay"&&r.pay==="daily"&&!r.unit){r.unit="litre";r.qty=1}paintRoleSheet()}

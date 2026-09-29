@@ -1,5 +1,5 @@
 // Keeps the app working offline. Bump VERSION whenever index.html changes.
-const VERSION = "homecrew-v5";
+const VERSION = "homecrew-v6";
 const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./apple-touch-icon.png", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", e => {
