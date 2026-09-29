@@ -1045,8 +1045,15 @@ function dietShareText(p){
   return `🥗 ${p.from}’s diet chart – to buy (${fmtDay(todayISO())})\n`+Object.keys(by).map(v=>{const r=role(v)||{person:"Other",icon:"🛒"};
     return `\n${r.icon} ${r.person}:\n`+by[v].map(i=>"• "+i.n+(i.q?" – "+i.q:"")).join("\n")}).join("\n");
 }
+function refreshDiet(p){ // re-read a chart saved by an older version, keeping ticks and quantities
+  const old=new Map(p.items.map(i=>[i.n,i]));
+  p.items=dietMatch(p.text||"").map(x=>{const o=old.get(x.n);return Object.assign(x,{st:o?o.st:"",q:o?o.q:"",v:o&&o.v?o.v:x.v})})
+    .concat(p.items.filter(i=>i.ctx==="added by hand"&&!p.items.some(()=>false)).filter(i=>!dietMatch(p.text||"").some(x=>x.n===i.n)));
+  p.meals=parseDietMeals(p.text||"");p.mv=MEAL_PARSER;saveDiet(p);return p;
+}
 function vDiet(){
-  const p=curDiet(),all=diets();
+  let p=curDiet();const all=diets();
+  if(p&&p.mv!==MEAL_PARSER)p=refreshDiet(JSON.parse(JSON.stringify(p)));
   let h=`<div class="card" style="margin-top:12px"><div class="row" style="gap:12px;align-items:flex-start"><div class="av" style="background:var(--noon-tint)">🥗</div><div style="flex:1;min-width:200px"><b style="font-family:var(--display);font-size:19px">Rinki’s diet chart</b>
     <p class="muted" style="margin:2px 0 10px;font-size:14px">Save the Word file from WhatsApp, then upload it here. The app lists the ingredients, you check the pantry with Khala or Asha, and whatever’s missing goes to the right shop.</p>
     <div class="row"><label class="btn pri" style="cursor:pointer">⬆ Upload Word file<input type="file" accept=".docx,.doc,.txt,application/vnd.openxmlformats-officedocument.wordprocessingml.document" data-f="dietFile" hidden></label>
