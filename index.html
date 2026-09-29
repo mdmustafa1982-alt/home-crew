@@ -143,6 +143,14 @@ h1:has(.hic){display:flex;align-items:center;gap:4px}
 .bud .l b::before{content:"";display:inline-block;width:10px;height:10px;border-radius:4px;background:var(--cc,var(--ink-3));margin-right:7px;vertical-align:1px}
 .vend:nth-of-type(5n+1) .vh{background:var(--noon-tint)}.vend:nth-of-type(5n+2) .vh{background:var(--dawn-tint)}.vend:nth-of-type(5n+3) .vh{background:var(--day-tint)}.vend:nth-of-type(5n+4) .vh{background:var(--dusk-tint)}.vend:nth-of-type(5n+5) .vh{background:var(--gold-tint)}
 .datebar .iconbtn{background:var(--gold-tint);border-color:var(--gold);color:var(--gold-ink)}
+.catgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:6px}
+.catchip{display:flex;flex-direction:column;align-items:center;gap:2px;border:2px solid var(--line);background:var(--paper);border-radius:16px;padding:7px 4px;font-size:12px;font-weight:800;line-height:1.1;text-align:center;color:var(--ink-2)}
+.catchip span{font-size:22px;line-height:1.1}
+.catchip.on{background:var(--gold-tint);border-color:var(--gold);color:var(--ink)}
+.quick{display:flex;gap:8px;overflow-x:auto;margin:0 -16px 12px;padding:2px 16px 6px;scrollbar-width:none}
+.quick::-webkit-scrollbar{display:none}
+.qbtn{flex:none;display:flex;flex-direction:column;align-items:center;gap:2px;width:84px;padding:8px 4px;border-radius:18px;border:2px solid var(--line);background:var(--paper);box-shadow:var(--shadow);font-size:12px;font-weight:800;line-height:1.1;color:var(--ink)}
+.qbtn span{font-size:24px;line-height:1.1}
 /* segmented */
 .seg{display:inline-flex;background:var(--soft);border-radius:16px;padding:3px;gap:2px;flex-wrap:wrap}
 .seg button{border:0;background:none;border-radius:13px;padding:5px 11px;font-size:13.5px;font-weight:800;color:var(--ink-2);min-height:32px}
@@ -385,9 +393,18 @@ const fmtMon=m=>toD(m+"-01").toLocaleDateString("en-IN",{month:"short"});
 const fmtTime=t=>new Date(t).toLocaleString("en-IN",{day:"numeric",month:"short",hour:"numeric",minute:"2-digit"});
 
 /* ============ categories, slots ============ */
-const CATS={staff:"Staff salaries",veg:"Vegetables",fish:"Fish, paneer & ghee",fruit:"Fruits",grocery:"Grocery",milk:"Milk",med:"Medicine",transport:"Transport",news:"Newspaper",other:"Other"};
-const CAT_COLOR={staff:"--c1",veg:"--c5",fish:"--c3",fruit:"--c2",grocery:"--c6",milk:"--c7",med:"--c8",transport:"--c4",news:"--c9",other:"--c10"};
-const PAY={monthly:"Monthly salary",visit:"Per visit",trip:"Per trip",daily:"Per unit, daily (e.g. milk)",bill:"Pay per bill"};
+const CATS={staff:"Staff salaries",veg:"Vegetables",fish:"Fish, paneer & ghee",fruit:"Fruits",grocery:"Grocery",milk:"Milk",med:"Medicine",transport:"Local transport",news:"Newspaper",
+  fuel:"Fuel (petrol / diesel)",lpg:"LPG gas",elec:"Electricity",net:"Internet & phone",water:"Drinking water",maint:"Society / maintenance",
+  repairLab:"Repairs – labour",repairMat:"Repairs – material",household:"Household & cleaning supplies",laundry:"Laundry / ironing",
+  tips:"Tips & bonus to staff",alms:"Alms & donations",travel:"Travel & trips",guests:"Guests & entertaining",eatout:"Eating out & delivery",
+  gifts:"Gifts & festivals",child:"Child – school & toys",health:"Doctor & health",other:"Other"};
+const CAT_ICON={staff:"👥",veg:"🥬",fish:"🐟",fruit:"🍎",grocery:"🛍️",milk:"🥛",med:"💊",transport:"🛺",news:"📰",fuel:"⛽",lpg:"🔥",elec:"⚡",net:"🌐",water:"💧",maint:"🏢",
+  repairLab:"🧑‍🔧",repairMat:"🧱",household:"🧴",laundry:"👕",tips:"💝",alms:"🤲",travel:"✈️",guests:"🎉",eatout:"🍕",gifts:"🎁",child:"🎒",health:"🩺",other:"🧾"};
+const CAT_COLOR=(()=>{const o={staff:"--c1",veg:"--c5",fish:"--c3",fruit:"--c2",grocery:"--c6",milk:"--c7",med:"--c8",transport:"--c4",news:"--c9",other:"--c10"};let i=0;
+  Object.keys(CATS).forEach(c=>{if(!o[c])o[c]="--c"+(1+(i++%9))});return o})();
+const QUICK_CATS=["fuel","lpg","elec","net","repairLab","repairMat","tips","alms","travel","guests","household","other"];
+const billKey=b=>b.vendor&&b.vendor!=="other"&&role(b.vendor)?b.vendor:"cat:"+(b.cat||"other");
+const PAY={monthly:"Monthly salary",visit:"Per visit / per day",included:"Included in their other pay",trip:"Per trip",daily:"Per unit, daily (e.g. milk)",bill:"Pay per bill"};
 const KIND={staff:"Staff – daily tasks & review",supply:"Daily supply / service",vendor:"Shop / vendor"};
 const SLOTS=[
   {id:"breakfast",label:"Breakfast",cook:"cookAM"},
@@ -401,27 +418,29 @@ const GROUPS={breakfast:"Breakfast",dal:"Dal",sabji:"Sabji / veg",fish:"Fish",pr
 /* ============ seed data ============ */
 function tasks(prefix,list){return list.map((t,i)=>typeof t==="string"?{id:prefix+"-"+(i+1),text:t,days:null}:{id:prefix+"-"+(i+1),text:t[0],days:t[1]||null})}
 const SEED_ROLES=[
-  {id:"cookAM",title:"Morning Cook",person:"Khala",icon:"🍳",kind:"staff",time:"7:00 – 11:00",days:ALL,pay:"monthly",rate:0,cat:"staff",
+  {id:"cookAM",title:"Morning Cook",person:"Khala",icon:"🍳",kind:"staff",time:"7:00 – 11:00",days:ALL,pay:"monthly",rate:6000,cat:"staff",
    tasks:tasks("cookAM",["Breakfast as per approved menu","Lunch as per approved menu","Child’s meal as per menu","Cut & prep vegetables for the evening","Clean stove, counters & sink after cooking","Tell us what is running low"])},
-  {id:"cookPM",title:"Evening Cook",person:"Asha",icon:"🍲",kind:"staff",time:"17:00 – 20:30",days:ALL,pay:"monthly",rate:0,cat:"staff",
+  {id:"cookPM",title:"Evening Cook",person:"Asha",icon:"🍲",kind:"staff",time:"17:00 – 20:30",days:ALL,pay:"monthly",rate:11000,cat:"staff",
    tasks:tasks("cookPM",["Evening snacks as per menu","Dinner as per approved menu","Knead dough / soak for tomorrow morning","Store leftovers, wipe fridge shelf","Close kitchen – gas off, bins out","Tell us what is running low"])},
-  {id:"care",title:"Home Care Taker",person:"Asha",icon:"🧸",kind:"staff",time:"",days:ALL,pay:"monthly",rate:0,cat:"staff",
+  {id:"care",title:"Home Care Taker",person:"Asha",icon:"🧸",kind:"staff",time:"",days:ALL,pay:"included",rate:0,cat:"staff",
    tasks:tasks("care",["Child’s bath, clothes & hygiene","Feeding on time as per menu","Nap & play routine","Wash, dry & fold child’s clothes","Sterilise bottles, clean child’s things","Report health, mood & anything unusual"])},
-  {id:"clean",title:"Daily Cleaner",person:"Jhuma",icon:"🧹",kind:"staff",time:"",days:ALL,pay:"monthly",rate:0,cat:"staff",
+  {id:"clean",title:"Daily Cleaner",person:"Jhuma",icon:"🧹",kind:"staff",time:"",days:ALL,pay:"visit",rate:100,cat:"staff",
    tasks:tasks("clean",["Sweep & mop all rooms","Dust tables, shelves & switchboards","Wash utensils","Make beds & tidy rooms","Empty all dustbins","Sweep balcony & stairs"])},
-  {id:"deep",title:"Deep Cleaner / Duster",person:"Pinky",icon:"✨",kind:"staff",time:"",days:[3,6],pay:"visit",rate:0,cat:"staff",
+  {id:"deep",title:"Deep Cleaner / Duster",person:"Pinky",icon:"✨",kind:"staff",time:"",days:[3,6],pay:"visit",rate:200,cat:"staff",
    tasks:tasks("deep",["Ceiling fans & lights","Windows, grills & doors","Cupboard tops & behind furniture",["Sofa, curtains & mattresses vacuum",[6]],["Kitchen tiles, chimney & exhaust fan",[6]],["Fridge & microwave inside",[3]]])},
-  {id:"garden",title:"Gardener",person:"Shambhu Da",icon:"🌿",kind:"staff",time:"",days:ALL,pay:"monthly",rate:0,cat:"staff",
+  {id:"garden",title:"Gardener",person:"Shambhu Da",icon:"🌿",kind:"staff",time:"",days:ALL,pay:"monthly",rate:5000,cat:"staff",
    tasks:tasks("garden",["Water all plants","Sweep leaves & garden area",["Weeding & pruning",[0]],["Manure / fertiliser check",[0]]])},
-  {id:"vehicle",title:"Vehicle Cleaner",person:"Shambhu Da",icon:"🚗",kind:"staff",time:"",days:ALL,pay:"monthly",rate:0,cat:"staff",
-   tasks:tasks("vehicle",["Car washed / wiped outside","Two-wheeler wiped",["Car inside – vacuum & mats",[0]]])},
-  {id:"bath",title:"Bathroom Cleaner",person:"Shambhu Da",icon:"🚿",kind:"staff",time:"",days:[1,4],pay:"monthly",rate:0,cat:"staff",
+  {id:"vehicle",title:"Vehicle Cleaner",person:"Shambhu Da",icon:"🚗",kind:"staff",time:"",days:[2,4,6],pay:"included",rate:0,cat:"staff",
+   tasks:tasks("vehicle",["Car washed / wiped outside","Two-wheeler wiped",["Car inside – vacuum & mats",[6]]])},
+  {id:"bath",title:"Bathroom Cleaner",person:"Shambhu Da",icon:"🚿",kind:"staff",time:"",days:[0],pay:"included",rate:0,cat:"staff",
    tasks:tasks("bath",["Scrub toilets & floors","Basins, taps & mirrors","Clear drains","Refill soap, check cleaning supplies"])},
-  {id:"driver",title:"Driver",person:"Bappa Da",icon:"🚙",kind:"staff",time:"",days:[1,2,3,4,5,6],pay:"monthly",rate:0,cat:"staff",
+  {id:"driver",title:"Driver",person:"Bappa Da",icon:"🚙",kind:"staff",time:"",days:[1,2,3,4,5,6],pay:"bill",rate:0,cat:"staff",
    tasks:tasks("driver",["On time for all trips","Fuel & trip log updated","Car kept clean & locked"])},
-  {id:"milk",title:"Milkman",person:"Shanto Da",icon:"🥛",kind:"supply",days:ALL,pay:"daily",rate:0,unit:"litre",qty:1,cat:"milk",tasks:[]},
-  {id:"news",title:"Newspaper",person:"Khokon Da",icon:"📰",kind:"supply",days:ALL,pay:"monthly",rate:0,unit:"paper",qty:1,cat:"news",tasks:[]},
-  {id:"transport",title:"Local Transport",person:"Manoj Da",icon:"🛺",kind:"supply",days:ALL,pay:"trip",rate:0,unit:"trip",qty:0,cat:"transport",tasks:[]},
+  {id:"milk",title:"Milkman",person:"Shanto Da",icon:"🥛",kind:"supply",days:ALL,pay:"daily",rate:30,unit:"day",qty:1,cat:"milk",tasks:[]},
+  {id:"news",title:"Newspaper",person:"Khokon Da",icon:"📰",kind:"supply",days:ALL,pay:"monthly",rate:200,unit:"paper",qty:1,cat:"news",tasks:[]},
+  {id:"transport",title:"Local Transport",person:"Manoj Da",icon:"🛺",kind:"vendor",pay:"bill",cat:"transport",tasks:[]},
+  {id:"gym",title:"Gym Trainer",person:"Farha",icon:"🏋️",kind:"staff",time:"",days:[1,2,3,4,5,6],pay:"monthly",rate:5000,cat:"staff",
+   tasks:tasks("gym",["Session on time","Workout as per plan","Stretching & cool-down","Note progress & diet tips"])},
   {id:"sandip",title:"Fish, Paneer, Mushroom, Ghee",person:"Sandip",icon:"🐟",kind:"vendor",pay:"bill",cat:"fish",tasks:[]},
   {id:"raju",title:"Fruits",person:"Raju Da",icon:"🍎",kind:"vendor",pay:"bill",cat:"fruit",tasks:[]},
   {id:"dipankar",title:"Vegetables",person:"Dipankar",icon:"🥬",kind:"vendor",pay:"bill",cat:"veg",tasks:[]},
@@ -469,11 +488,23 @@ const SEED_SETTINGS={
   paidLeaves:4,deduct:true,staples:false,
   budgets:{staff:0,veg:0,fish:0,fruit:0,grocery:0,milk:0,med:0,transport:0,news:0,other:0}
 };
+const PAY_UPDATE_V2={ // pay & schedule the family gave on 29 Sep 2026
+  cookAM:{rate:6000},cookPM:{rate:11000},care:{pay:"included",rate:0},clean:{pay:"visit",rate:100},deep:{pay:"visit",rate:200},
+  garden:{pay:"monthly",rate:5000},vehicle:{pay:"included",rate:0,days:[2,4,6]},bath:{pay:"included",rate:0,days:[0]},
+  driver:{pay:"bill",rate:0},milk:{pay:"daily",rate:30,unit:"day",qty:1},news:{rate:200},transport:{kind:"vendor",pay:"bill",rate:0}
+};
+function upgrade(){
+  const st=S();if((st.seedV||1)>=2)return;
+  const list=roles().map(r=>{const p=PAY_UPDATE_V2[r.id];if(!p||+r.rate)return r;const n=Object.assign({},r,p);
+    if(r.id==="vehicle")n.tasks=(r.tasks||[]).map(t=>t.id==="vehicle-3"&&t.days&&t.days.join()==="0"?Object.assign({},t,{days:[6]}):t);return n});
+  if(!list.some(r=>r.id==="gym")){const g=SEED_ROLES.find(r=>r.id==="gym");const i=list.findIndex(r=>r.id==="driver");list.splice(i>=0?i+1:list.length,0,JSON.parse(JSON.stringify(g)))}
+  store.set("ghar-roles",list);store.set("ghar-settings",Object.assign({},S(),{seedV:2}));
+}
 function seed(){
   if(!store.get("ghar-roles")) store.set("ghar-roles",SEED_ROLES);
   if(!store.get("ghar-dishes")) store.set("ghar-dishes",SEED_DISHES);
   const st=store.get("ghar-settings");
-  if(!st) store.set("ghar-settings",Object.assign({},SEED_SETTINGS,{start:todayISO()}));
+  if(!st) store.set("ghar-settings",Object.assign({},SEED_SETTINGS,{start:todayISO(),seedV:2}));
   else if(!st.start) store.set("ghar-settings",Object.assign({},st,{start:todayISO()}));
   if(!store.get("ghar-items")){const m={};for(const v in ITEM_SEED) ITEM_SEED[v].split(",").forEach(n=>m[n.toLowerCase()]={name:n,vendor:v,staple:STAPLES.includes(n)});store.set("ghar-items",m)}
 }
@@ -500,7 +531,7 @@ const me=()=>local("me")||"";
 const isApprover=()=>me()&&me()===S().approver;
 function persons(list){const m=new Map();(list||roles()).forEach(r=>{if(!m.has(r.person))m.set(r.person,[]);m.get(r.person).push(r)});return m}
 const TONES=["day","dawn","noon","dusk","all","aqua","gold"];
-const ROLE_TONE={cookAM:"dawn",cookPM:"dusk",care:"all",clean:"day",deep:"aqua",garden:"noon",vehicle:"day",bath:"aqua",driver:"gold"};
+const ROLE_TONE={cookAM:"dawn",cookPM:"dusk",care:"all",clean:"day",deep:"aqua",garden:"noon",vehicle:"day",bath:"aqua",driver:"gold",gym:"all"};
 function toneOf(r){if(ROLE_TONE[r.id])return ROLE_TONE[r.id];let h=0;for(const c of r.id)h=(h*31+c.charCodeAt(0))>>>0;return TONES[h%TONES.length]}
 const SLOT_TONE={breakfast:"dawn",lunch:"day",child:"all",snacks:"gold",dinner:"dusk"};
 function dishLabel(x){if(x&&x[0]==="#")return x.slice(1);const d=dish(x);return d?d.name:"(removed dish)"}
@@ -736,7 +767,7 @@ function paintSlotSheet(sl){
 function vShop(){
   const list=shop(),cutoff=addDays(todayISO(),-7);
   const vis=list.filter(i=>i.status!=="got"||(i.gotOn||"")>=cutoff);
-  const vendors=roles().filter(r=>r.kind==="vendor"||r.id==="milk");
+  const vendors=roles().filter(r=>(r.kind==="vendor"&&r.cat!=="transport"&&r.cat!=="med")||r.id==="milk");
   let h=`<h1><span class="hic" data-tone="gold" aria-hidden="true">🛒</span>Shopping</h1><p class="sub">Build lists from the approved menu, send them to each shop, then tick what arrived and check quality.</p>`;
   h+=`<div class="card"><div class="row"><button class="btn pri" data-a="fromMenu" data-n="0">+ From this week’s menu</button><button class="btn" data-a="fromMenu" data-n="1">+ Next week’s menu</button></div>
    <div class="addrow" style="margin-top:12px"><input class="in" id="newItem" placeholder="Add item, e.g. Atta 5kg" data-enter="addItem" list="itemNames">
@@ -781,6 +812,7 @@ function roleDue(r,m){
   const days=monthDays(m),t=todayISO(),past=liveDays(m),s=S();
   const rate=+r.rate||0;
   if(m<monthOf(startDay())) return {due:0,detail:"before the app was in use"};
+  if(r.pay==="included"){const o=roles().filter(x=>x.person===r.person&&x.id!==r.id&&x.pay!=="included");return {due:0,detail:"included"+(o.length?" in "+o.map(x=>x.title).join(" / ")+" pay":"")}}
   if(r.pay==="bill"){const b=bills(m).filter(x=>x.vendor===r.id);return {due:b.reduce((a,x)=>a+(+x.amount||0),0),detail:`${b.length} bill${b.length===1?"":"s"}`,unpaid:b.filter(x=>!x.paid).reduce((a,x)=>a+(+x.amount||0),0)}}
   if(r.pay==="trip"){let n=0;past.forEach(d=>{const x=recOnly(d);n+=x&&x.sup&&x.sup[r.id]?+x.sup[r.id].qty||0:0});return {due:n*rate,detail:`${n} trip${n===1?"":"s"} × ${rupee(rate)}`}}
   if(r.pay==="daily"){let q=0;past.forEach(d=>{const x=recOnly(d),v=x&&x.sup&&x.sup[r.id];q+=v&&v.qty!=null?+v.qty:(worksOn(r,d)?+r.qty||0:0)});return {due:q*rate,detail:`${+q.toFixed(2)} ${r.unit||""} × ${rupee(rate)}`}}
@@ -812,7 +844,7 @@ function vMoney(){
    <div class="stat"><b class="num">${rupee(dueStaffTot)}</b><span>staff & services due</span></div>
    <div class="stat"><b class="num">${rupee(Math.max(0,dueStaffTot-paidTot))}</b><span>still to pay staff</span></div>
    <div class="stat"><b class="num">${rupee(unpaidBills)}</b><span>unpaid shop bills</span></div></div>`;
-  if(roles().some(r=>r.pay!=="bill"&&!(+r.rate))) h+=`<div class="hint">Some pay rates are still ₹0. Add them in ⚙︎ Setup → Staff & vendors so dues are right.</div>`;
+  if(roles().some(r=>r.active!==false&&!["bill","included"].includes(r.pay)&&!(+r.rate))) h+=`<div class="hint">Some pay rates are still ₹0. Add them in ⚙︎ Setup → Staff & vendors so dues are right.</div>`;
   // staff table
   h+=`<h2><span class="hic" data-tone="dusk" aria-hidden="true">👥</span>Staff & services <small>due vs paid</small></h2><div class="card"><div class="tscroll"><table class="t"><thead><tr><th>Person</th><th class="r">Due</th><th class="r">Paid</th><th class="r">Balance</th><th></th></tr></thead><tbody>`;
   people.forEach((rs,person)=>{
@@ -827,10 +859,12 @@ function vMoney(){
   if(p.length){h+=`<h2><span class="hic" data-tone="noon" aria-hidden="true">💵</span>Payments made <small>${rupee(paidTot)}</small></h2><div class="card">${p.slice().sort((a,b)=>a.date<b.date?1:-1).map(x=>`<div class="li" data-a="editPay" data-id="${x.id}"><div class="t"><b>${esc(x.person)}</b> · ${rupee(x.amount)}<small>${fmtDay(x.date)} · ${esc(x.mode||"")}${x.note?" · "+esc(x.note):""}${x.by?" · by "+esc(x.by):""}</small></div><span class="go">›</span></div>`).join("")}</div>`}
   // bills
   const b=bills(m);
-  h+=`<h2><span class="hic" data-tone="dawn" aria-hidden="true">🧾</span>Shop bills & other spends <span class="sp"></span><button class="btn sm pri" data-a="bill">+ Add bill</button></h2><div class="card">`;
-  if(!b.length) h+=`<p class="muted" style="margin:0">No bills yet this month. Add each bill from Dipankar, Sandip, Mini Bazaar, Raju Da, Dipti Medical and any other spend.</p>`;
-  const bv=groupBy(b,x=>x.vendor);
-  Object.keys(bv).forEach(v=>{const r=role(v)||{person:"Other",icon:"🧾"},arr=bv[v],sum=arr.reduce((a,x)=>a+(+x.amount||0),0),un=arr.filter(x=>!x.paid);
+  h+=`<h2><span class="hic" data-tone="dawn" aria-hidden="true">🧾</span>Bills & expenses <span class="sp"></span><button class="btn sm pri" data-a="bill">+ Add expense</button></h2>
+  <div class="quick">${QUICK_CATS.map(c=>`<button class="qbtn" data-a="bill" data-v="cat:${c}"><span>${CAT_ICON[c]}</span>${CATS[c].replace(/ \(.*\)/,"")}</button>`).join("")}</div>`;
+  h+=`<div class="card">`;
+  if(!b.length) h+=`<p class="muted" style="margin:0">No bills yet this month. Add what you pay at actuals: Bappa Da (driver), Manoj Da (transport), Dipankar, Sandip, Raju Da, Mini Bazaar, Dipti Medical, and any other spend.</p>`;
+  const bv=groupBy(b,billKey),tot2=k=>bv[k].reduce((a,x)=>a+(+x.amount||0),0);
+  Object.keys(bv).sort((p,q)=>tot2(q)-tot2(p)).forEach(v=>{const r=groupInfo(v),arr=bv[v],sum=arr.reduce((a,x)=>a+(+x.amount||0),0),un=arr.filter(x=>!x.paid);
     h+=`<div class="li" data-a="vendorBills" data-v="${v}"><div class="av" style="width:36px;height:36px;font-size:18px">${r.icon}</div><div class="t"><b>${esc(r.person)}</b> · ${rupee(sum)}<small>${arr.length} bill${arr.length===1?"":"s"}${un.length?` · <span class="err">${rupee(un.reduce((a,x)=>a+(+x.amount||0),0))} unpaid</span>`:" · all paid"}</small></div><span class="go">›</span></div>`});
   h+=`</div>`;
   // budget
@@ -851,24 +885,30 @@ function paySheet(person,due,edit){
    <label class="f" for="pNote">Note</label><input class="in" id="pNote" value="${esc(x.note||"")}" placeholder="e.g. September salary, advance, Durga Puja bonus">
    <div class="acts">${edit?`<button class="btn bad" data-a="delPay">Delete</button>`:""}<span class="sp"></span><button class="btn" data-a="close">Cancel</button><button class="btn pri" data-a="savePay">Save payment</button></div>`);
 }
-function billSheet(edit,vendor){
+function billSheet(edit,preset){
   const vendors=roles().filter(r=>r.pay==="bill");
-  const x=edit||{date:todayISO(),vendor:vendor||vendors[0]&&vendors[0].id,amount:"",paid:true,note:"",cat:""};
-  sheetCtx={type:"bill",id:edit&&edit.id,month:edit?monthOf(edit.date):null};
-  openSheet(`<div class="sh"><h3>${edit?"Edit bill":"Add a bill"}</h3><button class="x" data-a="close" aria-label="Close">✕</button></div>
-   <label class="f" for="bVend">Shop / vendor</label><select class="in" id="bVend">${vendors.map(r=>`<option value="${r.id}"${r.id===x.vendor?" selected":""}>${esc(r.person)} – ${esc(r.title)}</option>`).join("")}<option value="other"${x.vendor==="other"?" selected":""}>Other spend</option></select>
+  let x=edit;
+  if(!x){x={date:todayISO(),vendor:"other",amount:"",paid:true,note:"",cat:"other",to:""};
+    if(preset&&preset.startsWith("cat:"))x.cat=preset.slice(4);else if(preset&&role(preset)){x.vendor=preset;x.cat=role(preset).cat||"other"}}
+  const cat=x.cat||(role(x.vendor)||{}).cat||"other";
+  sheetCtx={type:"bill",id:edit&&edit.id,month:edit?monthOf(edit.date):null,cat};
+  openSheet(`<div class="sh"><h3>${edit?"Edit expense":"Add an expense"}</h3><button class="x" data-a="close" aria-label="Close">✕</button></div>
    <div class="grid2"><div><label class="f" for="bAmt">Amount (₹)</label><input class="in num" id="bAmt" type="number" inputmode="decimal" value="${esc(x.amount)}"></div>
    <div><label class="f" for="bDate">Date</label><input class="in" id="bDate" type="date" value="${esc(x.date)}"></div></div>
-   <label class="f" for="bCat">Budget category</label><select class="in" id="bCat"><option value="">Same as the vendor</option>${Object.keys(CATS).map(c=>`<option value="${c}"${x.cat===c?" selected":""}>${CATS[c]}</option>`).join("")}</select>
-   <label class="f" for="bNote">What was it for?</label><input class="in" id="bNote" value="${esc(x.note||"")}" placeholder="e.g. week’s vegetables, baby medicine">
+   <label class="f">What for?</label><div class="catgrid" id="bCats">${Object.keys(CATS).map(c=>`<button type="button" class="catchip${c===cat?" on":""}" data-a="pickCat" data-c="${c}"><span>${CAT_ICON[c]}</span>${CATS[c]}</button>`).join("")}</div>
+   <label class="f" for="bVend">Shop / vendor</label><select class="in" id="bVend" data-f="bVend"><option value="other"${x.vendor==="other"?" selected":""}>No regular vendor</option>${vendors.map(r=>`<option value="${r.id}"${r.id===x.vendor?" selected":""}>${esc(r.person)} – ${esc(r.title)}</option>`).join("")}</select>
+   <label class="f" for="bTo">Paid to (name, optional)</label><input class="in" id="bTo" list="peopleNames" value="${esc(x.to||"")}" placeholder="e.g. electrician Ramesh, HP Gas, Jio">
+   <datalist id="peopleNames">${[...new Set(roles().map(r=>r.person))].map(p=>`<option value="${esc(p)}">`).join("")}</datalist>
+   <label class="f" for="bNote">Note</label><input class="in" id="bNote" value="${esc(x.note||"")}" placeholder="e.g. geyser repair, Durga Puja tip, cylinder refill">
    <label class="f">Payment</label><div class="seg" id="bPaid"><button type="button" data-a="segpick" class="${x.paid?"on":""}">Paid</button><button type="button" data-a="segpick" class="${x.paid?"":"on"}">On credit (pay later)</button></div>
-   <div class="acts">${edit?`<button class="btn bad" data-a="delBill">Delete</button>`:""}<span class="sp"></span><button class="btn" data-a="close">Cancel</button><button class="btn pri" data-a="saveBill">Save bill</button></div>`);
+   <div class="acts">${edit?`<button class="btn bad" data-a="delBill">Delete</button>`:""}<span class="sp"></span><button class="btn" data-a="close">Cancel</button><button class="btn pri" data-a="saveBill">Save</button></div>`);
 }
+function groupInfo(k){if(k.startsWith("cat:")){const c=k.slice(4);return {person:CATS[c]||"Other",icon:CAT_ICON[c]||"🧾"}}return role(k)||{person:"Other",icon:"🧾"}}
 function vendorBillsSheet(v){
-  const r=role(v)||{person:"Other"},arr=bills(curMonth).filter(b=>b.vendor===v).sort((a,b)=>a.date<b.date?1:-1);
+  const r=groupInfo(v),arr=bills(curMonth).filter(b=>billKey(b)===v).sort((a,b)=>a.date<b.date?1:-1);
   openSheet(`<div class="sh"><h3>${esc(r.person)} · ${fmtMonth(curMonth)}</h3><button class="x" data-a="close" aria-label="Close">✕</button></div>
-   ${arr.map(b=>`<div class="li" data-a="editBill" data-id="${b.id}"><div class="t"><b>${rupee(b.amount)}</b> · ${fmtDay(b.date)}<small>${esc(b.note||"")}${b.paid?"":' <span class="err">unpaid</span>'}</small></div><span class="go">›</span></div>`).join("")}
-   <div class="acts">${arr.some(b=>!b.paid)?`<button class="btn" data-a="payAllBills" data-v="${v}">Mark all paid</button>`:""}<button class="btn pri" data-a="bill" data-v="${v}">+ Add bill</button></div>`);
+   ${arr.map(b=>`<div class="li" data-a="editBill" data-id="${b.id}"><div class="t"><b>${rupee(b.amount)}</b> · ${fmtDay(b.date)}<small>${[b.to,b.note].filter(Boolean).map(esc).join(" · ")}${b.paid?"":' <span class="err">unpaid</span>'}</small></div><span class="go">›</span></div>`).join("")}
+   <div class="acts">${arr.some(b=>!b.paid)?`<button class="btn" data-a="payAllBills" data-v="${v}">Mark all paid</button>`:""}<button class="btn pri" data-a="bill" data-v="${v}">+ Add</button></div>`);
 }
 
 /* ============ INSIGHTS ============ */
@@ -923,6 +963,8 @@ function vInsights(){
   if(unck.length) tips.push(["info","📝",`Tasks are mostly unchecked for ${[...new Set(unck.map(o=>esc(o.r.person)))].join(", ")}. Tick ✓ ½ ✗ during the daily review so these numbers are reliable.`]);
   const unappr=past.length-approved;if(unappr>=3&&past.length>=5) tips.push(["info","✅",`${unappr} day${unappr===1?"":"s"} this month ${unappr===1?"is":"are"} not approved. Even a quick 5-minute evening review helps.`]);
   const nw=addDays(mondayOf(t),7),nm=menuRec(nw);if(dow(t)>=4||dow(t)===0){if(nm.status!=="approved"&&m===monthOf(t)) tips.push(["info","🍽️",`Next week’s menu is not approved yet. Predict it and send it to ${esc(s.approver)} so shopping can be planned.`])}
+  const lastM=[1,2,3].map(i=>bills(addMonths(m,-i))),monthDone=m<monthOf(t)||+t.slice(8)>=25;
+  if(monthDone)["elec","net","maint","water"].forEach(c=>{const had=lastM.some(bs=>bs.some(b=>b.cat===c));if(had&&!bills(m).some(b=>b.cat===c))tips.push(["info",CAT_ICON[c],`No <b>${CATS[c]}</b> bill logged for ${fmtMonth(m)} yet – it was there in earlier months.`])});
   // vendors
   const iss=groupBy(shop().filter(i=>i.status==="got"&&i.check==="issue"&&monthOf(i.gotOn||"")===m),i=>i.vendor);
   for(const v in iss) if(iss[v].length>=2){const r=role(v);tips.push(["warn","⚠️",`${iss[v].length} quality issues from <b>${esc(r?r.person:v)}</b> this month (${iss[v].map(i=>esc(i.name)).join(", ")}). Talk to them or compare with another shop.`])}
@@ -969,7 +1011,7 @@ function vSetup(){
   h+=`<h2><span class="hic" data-tone="day" aria-hidden="true">🧑‍🍳</span>Staff & vendors <span class="sp"></span><button class="btn sm pri" data-a="newRole">+ Add</button></h2>`;
   groups.forEach(([k,l])=>{const list=roles().filter(r=>r.kind===k);if(!list.length)return;
     h+=`<div class="card"><div class="grouplabel">${l}</div>${list.map(r=>`<div class="li" data-a="editRole" data-r="${r.id}"><div class="av" style="width:36px;height:36px;font-size:18px">${r.icon||"👤"}</div>
-     <div class="t"><b>${esc(r.person)}</b> · ${esc(r.title)}${r.active===false?' <span class="chip">paused</span>':""}<small>${PAY[r.pay]||""}${r.pay!=="bill"?" · "+(+r.rate?rupee(r.rate)+(r.pay==="daily"?"/"+esc(r.unit||"unit"):r.pay==="trip"?"/trip":r.pay==="visit"?"/visit":"/month"):'<span class="err">rate not set</span>'):""}${r.kind==="staff"?` · ${(r.tasks||[]).length} tasks · ${r.days&&r.days.length<7?r.days.map(i=>WD[i]).join(" "):"every day"}`:""}</small></div><span class="go">›</span></div>`).join("")}</div>`});
+     <div class="t"><b>${esc(r.person)}</b> · ${esc(r.title)}${r.active===false?' <span class="chip">paused</span>':""}<small>${PAY[r.pay]||""}${!["bill","included"].includes(r.pay)?" · "+(+r.rate?rupee(r.rate)+(r.pay==="daily"?"/"+esc(r.unit||"unit"):r.pay==="trip"?"/trip":r.pay==="visit"?"/visit":"/month"):'<span class="err">rate not set</span>'):""}${r.kind==="staff"?` · ${(r.tasks||[]).length} tasks · ${r.days&&r.days.length<7?r.days.map(i=>WD[i]).join(" "):"every day"}`:""}</small></div><span class="go">›</span></div>`).join("")}</div>`});
   h+=`<h2><span class="hic" data-tone="dawn" aria-hidden="true">🍽️</span>Menu</h2><div class="card">
    <label class="f">Fish days (lunch has fish)</label>${dayChips(s.fishDays,"fish")}
    <label class="f">Days with paneer / egg / chicken at dinner</label>${dayChips(s.dinnerProteinDays,"dprot")}
@@ -997,7 +1039,7 @@ function paintRoleSheet(){
    <div class="grid2"><div><label class="f" for="rK">Type</label><select class="in" id="rK" data-f="rKind">${Object.keys(KIND).map(k=>`<option value="${k}"${r.kind===k?" selected":""}>${KIND[k]}</option>`).join("")}</select></div>
    <div><label class="f" for="rI">Icon (emoji)</label><input class="in" id="rI" value="${esc(r.icon||"")}" maxlength="4"></div></div>
    <div class="grid2"><div><label class="f" for="rPay">How they’re paid</label><select class="in" id="rPay" data-f="rPay">${Object.keys(PAY).map(k=>`<option value="${k}"${r.pay===k?" selected":""}>${PAY[k]}</option>`).join("")}</select></div>
-   <div ${r.pay==="bill"?"hidden":""}><label class="f" for="rRate">Rate (₹${r.pay==="monthly"?" per month":r.pay==="visit"?" per visit":r.pay==="trip"?" per trip":" per unit"})</label><input class="in num" id="rRate" type="number" inputmode="decimal" min="0" value="${+r.rate||""}"></div></div>
+   <div ${r.pay==="bill"||r.pay==="included"?"hidden":""}><label class="f" for="rRate">Rate (₹${r.pay==="monthly"?" per month":r.pay==="visit"?" per visit":r.pay==="trip"?" per trip":" per unit"})</label><input class="in num" id="rRate" type="number" inputmode="decimal" min="0" value="${+r.rate||""}"></div></div>
    ${r.pay==="daily"?`<div class="grid2"><div><label class="f" for="rU">Unit</label><input class="in" id="rU" value="${esc(r.unit||"")}" placeholder="litre"></div><div><label class="f" for="rQ">Usual quantity per day</label><input class="in num" id="rQ" type="number" step="0.25" min="0" value="${r.qty||0}"></div></div>`:""}
    <div class="grid2"><div><label class="f" for="rC">Budget category</label><select class="in" id="rC">${Object.keys(CATS).map(c=>`<option value="${c}"${r.cat===c?" selected":""}>${CATS[c]}</option>`).join("")}</select></div>
    <div><label class="f" for="rPh">WhatsApp number</label><input class="in" id="rPh" type="tel" inputmode="tel" value="${esc(r.phone||"")}" placeholder="98300 00000"></div></div>
@@ -1110,12 +1152,13 @@ const A={
   bill:e=>billSheet(null,e.dataset.v),
   vendorBills:e=>vendorBillsSheet(e.dataset.v),
   editBill:e=>{const x=bills(curMonth).find(b=>b.id===e.dataset.id);if(x)billSheet(x)},
+  pickCat:e=>{sheetCtx.cat=e.dataset.c;[...$("bCats").children].forEach(b=>b.classList.toggle("on",b===e));const v=role($("bVend").value);if(v&&v.cat!==e.dataset.c)$("bVend").value="other"},
   saveBill:()=>{const c=sheetCtx,amt=+$("bAmt").value,date=$("bDate").value||todayISO();if(!amt){toast("Enter an amount");return}
     const m=monthOf(date);if(c.id&&c.month)store.set("ghar-bill-"+c.month,bills(c.month).filter(b=>b.id!==c.id));
-    const list=bills(m).slice();list.push({id:c.id||uid(),vendor:$("bVend").value,amount:amt,date,cat:$("bCat").value,note:$("bNote").value.trim(),paid:$("bPaid").children[0].classList.contains("on"),by:me()});
+    const list=bills(m).slice();list.push({id:c.id||uid(),vendor:$("bVend").value,amount:amt,date,cat:c.cat,to:$("bTo").value.trim(),note:$("bNote").value.trim(),paid:$("bPaid").children[0].classList.contains("on"),by:me()});
     store.set("ghar-bill-"+m,list);closeSheet();render();toast("Bill saved")},
   delBill:()=>{if(!confirm("Delete this bill?"))return;store.set("ghar-bill-"+sheetCtx.month,bills(sheetCtx.month).filter(b=>b.id!==sheetCtx.id));closeSheet();render()},
-  payAllBills:e=>{store.set("ghar-bill-"+curMonth,bills(curMonth).map(b=>b.vendor===e.dataset.v?Object.assign({},b,{paid:true}):b));closeSheet();render();toast("Marked paid")},
+  payAllBills:e=>{store.set("ghar-bill-"+curMonth,bills(curMonth).map(b=>billKey(b)===e.dataset.v?Object.assign({},b,{paid:true}):b));closeSheet();render();toast("Marked paid")},
   budgets:()=>{go("setup");setTimeout(()=>{const el=$("bg-staff");if(el){el.scrollIntoView({block:"center"});el.focus()}},50)},
   // setup
   dchip:e=>e.classList.toggle("on"),
@@ -1177,6 +1220,7 @@ document.addEventListener("change",ev=>{
   if(!f)return;
   if(f==="slotDish"){sheetCtx.list[+e.dataset.i]=e.value}
   else if(f==="slotAdd"){if(e.value){sheetCtx.list.push(e.value);paintSlotSheet(SLOTS.find(x=>x.id===sheetCtx.slot))}}
+  else if(f==="bVend"){const r=role(e.value);if(r&&r.cat){sheetCtx.cat=r.cat;[...$("bCats").children].forEach(b=>b.classList.toggle("on",b.dataset.c===r.cat))}}
   else if(f==="approver"){const s=S();s.approver=e.value;store.set("ghar-settings",s);toast(e.value+" approves the menu")}
   else if(f==="childMeal"||f==="staples"||f==="deduct"){const s=S();s[f]=e.checked;store.set("ghar-settings",s);toast("Saved")}
   else if(f==="rKind"||f==="rPay"){captureRole();const r=sheetCtx.r;if(f==="rKind"&&r.kind==="vendor")r.pay="bill";if(f==="rPay"&&r.pay==="daily"&&!r.unit){r.unit="litre";r.qty=1}paintRoleSheet()}
@@ -1281,6 +1325,7 @@ if("serviceWorker" in navigator&&location.protocol.startsWith("http")){
 if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&$("scrim").hidden)render()});
 seed();
+upgrade();
 render();
 if(!me())setTimeout(whoSheet,300);
 if(sync.code)syncConnect();
