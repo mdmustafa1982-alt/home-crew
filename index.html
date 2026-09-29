@@ -254,6 +254,7 @@ details.card summary::marker{color:var(--ink-3)}
 .dish.fish::before{content:"🐟 "}
 .dish.protein::before{content:"🍗 "}
 .dish.custom{border:2px dashed var(--ink-3);background:none;box-shadow:none}
+.dish.diet{border:2px solid var(--noon);background:var(--noon-tint);box-shadow:none;font-weight:700}
 .empty{color:var(--ink-3);font-size:14px;font-weight:700;padding-top:3px}
 .banner{border-radius:var(--r);padding:14px 16px;margin:12px 0;display:flex;gap:12px;align-items:center;flex-wrap:wrap;border:2px solid transparent}
 .banner.draft{background:var(--paper);border-color:var(--line)}
@@ -488,11 +489,16 @@ const SEED_DISHES=[
   D("c4","Banana & fruit mash","child","Banana,Apple"),D("c5","Egg yolk & rice","child","Eggs,Rice"),D("c6","Ragi porridge","child","Ragi flour,Milk"),
   D("c7","Vegetable soup","child","Carrot,Beans,Potato"),D("c8","Curd rice","child","Rice,Curd"),D("c9","Soft idli","child","Idli batter")
 ];
+// Starting monthly budgets (₹), set 29 Sep 2026. Staff = Khala 6k + Asha 11k + Jhuma ~3k + Pinky ~1.8k + Shambhu Da 5k + Farha 5k + Bappa Da ~12k (actuals).
+const SUGGESTED_BUDGETS={staff:44000,veg:4000,fish:6000,fruit:3000,grocery:7000,milk:950,med:1500,transport:2000,news:200,
+  fuel:6000,lpg:1000,elec:3500,net:1500,water:400,maint:1000,repairLab:1500,repairMat:1500,household:2000,laundry:800,
+  tips:1000,alms:1000,travel:3000,guests:2000,eatout:3000,gifts:1500,child:3000,health:2500,other:1500};
+function fillBudgets(b){const o=Object.assign({},b||{});for(const c in SUGGESTED_BUDGETS)if(!(+o[c]))o[c]=SUGGESTED_BUDGETS[c];return o}
 const SEED_SETTINGS={
   users:["Mustafa","Sabnam"],approver:"Sabnam",
   fishDays:[0,1,3,5],dinnerProteinDays:[2,4,6,0],childMeal:true,
   paidLeaves:4,deduct:true,staples:false,
-  budgets:{staff:0,veg:0,fish:0,fruit:0,grocery:0,milk:0,med:0,transport:0,news:0,other:0}
+  budgets:{}
 };
 const PAY_UPDATE_V2={ // pay & schedule the family gave on 29 Sep 2026
   cookAM:{rate:6000},cookPM:{rate:11000},care:{pay:"included",rate:0},clean:{pay:"visit",rate:100},deep:{pay:"visit",rate:200},
@@ -504,6 +510,7 @@ function upgrade(){
   if(v<2){upgradeV2();v=2}
   if(v<3){const cat=items();if(cat.curd&&cat.curd.vendor==="sandip"&&!cat.curd.picked){cat.curd=Object.assign({},cat.curd,{vendor:"mini"});store.set("ghar-items",cat)}
     if(!roles().some(r=>r.id==="rinki"))store.set("ghar-roles",roles().concat([JSON.parse(JSON.stringify(SEED_ROLES.find(r=>r.id==="rinki")))]));v=3}
+  if(v<4){store.set("ghar-settings",Object.assign({},S(),{budgets:fillBudgets(S().budgets)}));v=4}
   if(v!==v0)store.set("ghar-settings",Object.assign({},S(),{seedV:v}));
 }
 function upgradeV2(){
@@ -516,7 +523,7 @@ function seed(){
   if(!store.get("ghar-roles")) store.set("ghar-roles",SEED_ROLES);
   if(!store.get("ghar-dishes")) store.set("ghar-dishes",SEED_DISHES);
   const st=store.get("ghar-settings");
-  if(!st) store.set("ghar-settings",Object.assign({},SEED_SETTINGS,{start:todayISO(),seedV:3}));
+  if(!st) store.set("ghar-settings",Object.assign({},SEED_SETTINGS,{start:todayISO(),seedV:4,budgets:fillBudgets({})}));
   else if(!st.start) store.set("ghar-settings",Object.assign({},st,{start:todayISO()}));
   if(!store.get("ghar-items")){const m={};for(const v in ITEM_SEED) ITEM_SEED[v].split(",").forEach(n=>m[n.toLowerCase()]={name:n,vendor:v,staple:STAPLES.includes(n)});store.set("ghar-items",m)}
 }
@@ -547,7 +554,7 @@ const ROLE_TONE={cookAM:"dawn",cookPM:"dusk",care:"all",clean:"day",deep:"aqua",
 function toneOf(r){if(ROLE_TONE[r.id])return ROLE_TONE[r.id];let h=0;for(const c of r.id)h=(h*31+c.charCodeAt(0))>>>0;return TONES[h%TONES.length]}
 const SLOT_TONE={breakfast:"dawn",lunch:"day",child:"all",snacks:"gold",dinner:"dusk"};
 function dishLabel(x){if(x&&x[0]==="#")return x.slice(1);const d=dish(x);return d?d.name:"(removed dish)"}
-function dishClass(x){if(x&&x[0]==="#")return "custom";const d=dish(x);return d&&(d.group==="fish"||d.group==="protein")?d.group:""}
+function dishClass(x){if(x&&x.startsWith("#🥗"))return "diet";if(x&&x[0]==="#")return "custom";const d=dish(x);return d&&(d.group==="fish"||d.group==="protein")?d.group:""}
 
 /* ============ ui helpers ============ */
 let view="today",curDate=todayISO(),curWeek=mondayOf(todayISO()),curMonth=monthOf(todayISO());
@@ -955,12 +962,47 @@ async function readDietFile(file){
   if(!nm.endsWith(".docx"))throw new Error("Please choose the Word (.docx) file Rinki sent – or paste the text below.");
   return docxXmlToText(await unzipEntry(new Uint8Array(await file.arrayBuffer()),"word/document.xml"));
 }
+// meal times in a diet chart -> the family menu slot (and a label kept in front of the food)
+const MEAL_ORDER=["early","breakfast","mid","lunch","evening","dinner","bed"];
+const MEAL_RE={early:/\b(early morning|wake ?up|on waking|empty stomach)\b/i,mid:/\b(mid[- ]?morning|brunch)\b/i,breakfast:/\b(breakfast|nashta)\b/i,lunch:/\blunch\b/i,
+  evening:/\b(evening|snacks?|tea ?time|pre[- ]?workout|post[- ]?workout)\b/i,dinner:/\b(dinner|supper)\b/i,bed:/\b(bed ?time|before (bed|sleep)|at night)\b/i};
+const MEAL_SLOT={early:["breakfast","Early morning"],breakfast:["breakfast",""],mid:["breakfast","Mid-morning"],lunch:["lunch",""],evening:["snacks",""],dinner:["dinner",""],bed:["dinner","Bedtime"]};
+const MEAL_LABEL={early:"Early morning",breakfast:"Breakfast",mid:"Mid-morning",lunch:"Lunch",evening:"Evening",dinner:"Dinner",bed:"Bedtime"};
+const mealOf=t=>{for(const k of ["early","mid","breakfast","lunch","evening","dinner","bed"])if(MEAL_RE[k].test(t))return k;return null};
+const dayOf=t=>{t=(t||"").trim();let m=t.match(/^(mon|tue|wed|thu|fri|sat|sun)[a-z]*\.?$/i);if(m)return "wd:"+["sun","mon","tue","wed","thu","fri","sat"].indexOf(m[1].toLowerCase());m=t.match(/^day\s*-?\s*(\d{1,2})$/i);return m?"day:"+m[1]:null};
+function parseDietMeals(text){
+  const out={generic:{},byDay:{}};
+  const add=(dk,meal,txt)=>{txt=(txt||"").replace(/^[\s:–\-|•*]+/,"").replace(/^\(?(\d{1,2}[:.]\d{2}\s*(am|pm)?|\d{1,2}\s*(am|pm))\)?\s*[:–-]?\s*/i,"").trim();if(!txt||txt.length<2)return;const o=dk?(out.byDay[dk]=out.byDay[dk]||{}):out.generic;(o[meal]=o[meal]||[]).push(txt)};
+  let mode=null,cols=[],cur=null;
+  for(const line of text.split(/\n+/).map(l=>l.trim()).filter(Boolean)){
+    if(AVOID_RE.test(line)){cur=null;continue}
+    const cells=line.split("|").map(c=>c.trim());
+    if(cells.length>=3){
+      const dc=cells.map(dayOf),mc=cells.map(c=>c.length<32?mealOf(c):null);
+      if(dc.filter(Boolean).length>=3){mode="days";cols=dc;cur=null;continue}           // header: | Mon | Tue | …
+      if(mc.filter(Boolean).length>=2){mode="meals";cols=mc;cur=null;continue}         // header: Day | Breakfast | Lunch | …
+      if(mode==="days"){const m=mealOf(cells[0]);if(m){cells.forEach((c,i)=>{if(i&&cols[i])add(cols[i],m,c)});continue}}
+      if(mode==="meals"){const d=dayOf(cells[0]);cells.forEach((c,i)=>{if(i&&cols[i])add(d,cols[i],c)});continue}
+    }
+    const m1=line.match(/^([^:|–(]{2,45}?)\s*(?:\([^)]*\))?\s*(?:[:|–]|\s-\s)\s*(.+)$/);
+    if(m1&&mealOf(m1[1])){cur=mealOf(m1[1]);add(null,cur,m1[2]);continue}
+    if(line.length<45&&mealOf(line)){cur=mealOf(line);continue}                        // a heading on its own line
+    if(cur&&line.length<220&&!/^(note|tips?|instructions?|general|drink|water|exercise)/i.test(line))add(null,cur,line);
+  }
+  return out;
+}
+function mealsFor(p,d,from){
+  const pm=p.meals||{generic:{},byDay:{}},by=pm.byDay||{};
+  let day=by["wd:"+dow(d)];
+  if(!day&&Object.keys(by).some(k=>k.startsWith("day:"))){const n=Object.keys(by).filter(k=>k.startsWith("day:")).length||7;day=by["day:"+(1+Math.round((toD(d)-toD(from))/864e5)%n)]}
+  return Object.assign({},pm.generic||{},day||{});
+}
 const diets=()=>store.get("ghar-diet")||[];
 let dietSel="";
 function curDiet(){const d=diets();return d.find(x=>x.id===dietSel)||d[0]||null}
 function saveDiet(p){const list=diets().filter(x=>x.id!==p.id);list.unshift(p);store.set("ghar-diet",list.slice(0,12))}
 function newDiet(name,text){
-  const p={id:uid(),name:name||"Diet chart",from:"Rinki",for:"Family",added:todayISO(),by:me(),text,items:dietMatch(text).map(x=>Object.assign(x,{st:"",q:""})),checkWith:"Khala"};
+  const p={id:uid(),name:name||"Diet chart",from:"Rinki",for:"Family",added:todayISO(),by:me(),text,items:dietMatch(text).map(x=>Object.assign(x,{st:"",q:""})),checkWith:"Khala",meals:parseDietMeals(text)};
   saveDiet(p);dietSel=p.id;return p;
 }
 function dietShareText(p){
@@ -980,6 +1022,7 @@ function vDiet(){
   if(all.length>1) h+=`<label class="f" for="dietPick">Chart</label><select class="in" id="dietPick" data-f="dietPick">${all.map(x=>`<option value="${x.id}"${x.id===p.id?" selected":""}>${esc(x.name)} · ${fmtDay(x.added)}</option>`).join("")}</select>`;
   h+=`<h2><span class="hic" data-tone="noon" aria-hidden="true">📄</span>${esc(p.name)} <small>${fmtDay(p.added)}</small><span class="sp"></span><button class="btn sm ghost bad" data-a="dietDel">Delete</button></h2>`;
   h+=`<div class="summary"><div class="stat"><b class="num">${p.items.length}</b><span>ingredients found</span></div><div class="stat"><b class="num">${have.length}</b><span>in the pantry</span></div><div class="stat"><b class="num">${need.length}</b><span>to buy</span></div></div>`;
+  h+=dietMenuCard(p);
   h+=`<div class="card"><div class="row"><b style="font-family:var(--display);font-size:17px">Check the pantry with</b><div class="seg">${["Khala","Asha"].map(n=>`<button class="${p.checkWith===n?"on":""}" data-a="dietWith" data-v="${n}">${n}</button>`).join("")}</div>
     <span class="sp"></span><label class="row" style="gap:6px;font-size:13.5px;font-weight:800;color:var(--ink-2)">For <input class="in" style="width:120px;min-height:34px;padding:4px 8px" data-f="dietFor" value="${esc(p.for||"")}"></label></div>
     <p class="muted" style="font-size:13.5px;margin:8px 0 4px">Go through the list with ${esc(p.checkWith)}: ✓ if it’s in the pantry, 🛒 if we need to buy it. Remove anything that isn’t really an ingredient.</p>
@@ -996,6 +1039,24 @@ function vDiet(){
     h+=Object.keys(by).map(v=>{const r=role(v)||{person:"Other",icon:"🛒"};return `<div class="sup"><div class="av">${r.icon}</div><div class="t"><b>${esc(r.person)}</b><small>${by[v].map(i=>esc(i.n)+(i.q?" – "+esc(i.q):"")).join(", ")}</small></div></div>`}).join("");
     h+=`<div class="acts" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:12px"><button class="btn" data-a="dietCopy">📋 Copy list</button><button class="btn" data-a="dietToShop">+ Add to shopping list</button><button class="btn pri" data-a="dietShare">💬 Post on WhatsApp</button></div>`;}
   h+=`</div><details class="card"><summary style="cursor:pointer;font-weight:800">See the chart text</summary><pre style="white-space:pre-wrap;font:600 13.5px/1.45 var(--body);margin:10px 0 0">${esc(p.text)}</pre></details>`;
+  return h;
+}
+function dietMenuCard(p){
+  if(!p.meals)p.meals=parseDietMeals(p.text||"");
+  const g=p.meals.generic||{},dayKeys=Object.keys(p.meals.byDay||{}),t=todayISO();
+  const a=Object.assign({from:t,to:addDays(t,6),days:ALL.slice(),mode:"replace"},p.apply||{});
+  const found=MEAL_ORDER.filter(k=>(g[k]||[]).length||dayKeys.some(dk=>(p.meals.byDay[dk][k]||[]).length));
+  let h=`<h2><span class="hic" data-tone="dawn" aria-hidden="true">📅</span>Put this diet on the menu</h2><div class="card">`;
+  if(!found.length) return h+`<p class="muted" style="margin:0">Couldn’t find meal times (breakfast, lunch, dinner…) in this chart. You can still add dishes to the menu by hand.</p></div>`;
+  h+=`<p class="muted" style="margin:0 0 8px;font-size:13.5px">${dayKeys.length?`Found a day-wise plan (${dayKeys.length} days). `:""}Check the meals, choose the dates, and the weekly menu fills in for Khala and Asha.</p>`;
+  if(!dayKeys.length) h+=MEAL_ORDER.filter(k=>(g[k]||[]).length).map(k=>`<label class="f" for="dm-${k}">${MEAL_LABEL[k]} <span class="faint">→ ${SLOTS.find(x=>x.id===MEAL_SLOT[k][0]).label}</span></label><textarea class="in" id="dm-${k}" style="min-height:48px" data-f="dietMeal" data-m="${k}">${esc(g[k].join("\n"))}</textarea>`).join("");
+  else h+=`<div class="menuline" style="margin:0 0 6px">${dayKeys.sort().map(dk=>{const lbl=dk.startsWith("wd:")?WD[+dk.slice(3)]:"Day "+dk.slice(4);return `<b>${lbl}:</b> ${MEAL_ORDER.filter(k=>(p.meals.byDay[dk][k]||[]).length).map(k=>MEAL_LABEL[k]+" – "+esc(p.meals.byDay[dk][k].join(", "))).join(" · ")}`}).join("<br>")}</div>`;
+  h+=`<div class="grid2"><div><label class="f" for="dFrom">From</label><input class="in" type="date" id="dFrom" value="${a.from}"></div><div><label class="f" for="dTo">To</label><input class="in" type="date" id="dTo" value="${a.to}"></div></div>
+   <div class="row" style="margin-top:8px"><button class="btn sm" data-a="dRange" data-v="week">This week</button><button class="btn sm" data-a="dRange" data-v="next">Next week</button><button class="btn sm" data-a="dRange" data-v="14">2 weeks</button><button class="btn sm" data-a="dRange" data-v="month">Rest of month</button></div>
+   <label class="f">On these days</label>${dayChips(a.days,"ddays")}
+   <label class="f">On the menu</label><div class="seg" id="dMode"><button type="button" data-a="segpick" data-v="replace" class="${a.mode==="replace"?"on":""}">Replace those meals</button><button type="button" data-a="segpick" data-v="add" class="${a.mode==="add"?"on":""}">Add next to the family food</button></div>
+   <p class="faint" style="font-size:12.5px;margin:8px 0 0">The child’s meal is left as it is.</p>
+   <div class="foot row">${p.applied?`<span class="reviewed">✓ On the menu ${fmtDay(p.applied.from)} – ${fmtDay(p.applied.to)}</span><button class="btn sm ghost" data-a="dietOpenMenu">Open menu ›</button>`:""}<span class="sp"></span><button class="btn pri" data-a="dietApply">📅 Update menu</button></div></div>`;
   return h;
 }
 function editDiet(fn){const p=JSON.parse(JSON.stringify(curDiet()));fn(p);saveDiet(p);render()}
@@ -1044,6 +1105,7 @@ const HINT_CAT={dipankar:"veg",raju:"fruit",sandip:"fish",milk:"milk",mini:"groc
 function shopRoles(){return roles().filter(r=>r.active!==false&&(r.kind==="vendor"||r.id==="milk")&&r.cat!=="transport")}
 function pickVendor(name,hint){
   const key=(name||"").trim().toLowerCase(),shops=shopRoles(),ok=id=>shops.some(r=>r.id===id);
+  if(!hint){const d=DIET_WORDS.find(d=>d.n.toLowerCase()===key||d.w.includes(key));if(d)hint=d.v}
   const learned=items()[key];if(learned&&learned.picked&&ok(learned.vendor))return learned.vendor;
   const sing=key.replace(/(es|s)$/,"");
   const named=shops.find(r=>r.title.toLowerCase().split(/[^a-z]+/).some(w=>w&&(w===key||w===sing||w.replace(/(es|s)$/,"")===sing)));
@@ -1274,7 +1336,8 @@ function vSetup(){
   h+=`<h2><span class="hic" data-tone="dusk" aria-hidden="true">📋</span>Pay rules</h2><div class="card"><div class="grid2"><div><label class="f" for="pl">Paid leaves per month (default)</label><input class="in num" id="pl" type="number" min="0" data-f="paidLeaves" value="${s.paidLeaves}"></div>
    <div><label class="f">&nbsp;</label><label class="row" style="gap:8px;font-weight:600;min-height:40px"><input type="checkbox" data-f="deduct" ${s.deduct?"checked":""}> Cut pay for extra days off</label></div></div>
    <p class="muted" style="font-size:13px;margin:8px 0 0">Monthly staff: extra days off × (salary ÷ working days in the month). You can set a different leave allowance for each person.</p></div>`;
-  h+=`<h2><span class="hic" data-tone="gold" aria-hidden="true">🎯</span>Monthly budget</h2><div class="card"><div class="grid2">${Object.keys(CATS).map(c=>`<div><label class="f" for="bg-${c}">${CATS[c]}</label><input class="in num" id="bg-${c}" type="number" inputmode="numeric" min="0" data-f="budget" data-c="${c}" value="${+s.budgets[c]||""}" placeholder="₹"></div>`).join("")}</div></div>`;
+  const btot=Object.keys(CATS).reduce((a,c)=>a+(+s.budgets[c]||0),0);
+  h+=`<h2><span class="hic" data-tone="gold" aria-hidden="true">🎯</span>Monthly budget <small>${rupee(btot)} a month</small><span class="sp"></span><button class="btn sm ghost" data-a="budgetReset">Use suggested</button></h2><div class="card"><p class="muted" style="margin:0 0 4px;font-size:13.5px">Starting estimates – change any of them. Insights warns you when a category runs over.</p><div class="grid2">${Object.keys(CATS).map(c=>`<div><label class="f" for="bg-${c}">${CATS[c]}</label><input class="in num" id="bg-${c}" type="number" inputmode="numeric" min="0" data-f="budget" data-c="${c}" value="${+s.budgets[c]||""}" placeholder="₹"></div>`).join("")}</div></div>`;
   h+=`<h2 id="syncSec"><span class="hic" data-tone="aqua" aria-hidden="true">🔄</span>Share between phones</h2><div class="card" id="syncBox">${syncHTML()}</div>`;
   h+=`<h2><span class="hic" data-tone="noon" aria-hidden="true">💾</span>Backup</h2><div class="card"><p class="muted" style="margin:0 0 10px;font-size:14px">Save a copy of all data as a file, or restore from one.</p><div class="row"><button class="btn" data-a="export">⬇ Download backup</button><label class="btn" style="cursor:pointer">⬆ Restore backup<input type="file" accept="application/json,.json" data-f="import" hidden></label></div></div>`;
   h+=`<p class="faint" style="font-size:12px;text-align:center;margin:26px 0">Home Crew · data stays on this phone${sync.code?" and your shared family copy":""}</p>`;
@@ -1384,6 +1447,23 @@ const A={
   dietAllHave:()=>editDiet(p=>p.items.forEach(i=>{if(!i.st)i.st="have"})),
   dietAdd:()=>{const v=$("dietNew").value.trim();if(!v)return;const d=DIET_WORDS.find(x=>x.n.toLowerCase()===v.toLowerCase()),cat=items()[v.toLowerCase()];
     editDiet(p=>{if(!p.items.some(i=>i.n.toLowerCase()===v.toLowerCase()))p.items.push({n:d?d.n:v,v:pickVendor(d?d.n:v,d&&d.v),st:"need",q:"",ctx:"added by hand"})});setTimeout(()=>$("dietNew")&&$("dietNew").focus(),0)},
+  dRange:e=>{const t=todayISO(),v=e.dataset.v;let f=t,to=addDays(t,6);
+    if(v==="week"){f=t;to=addDays(mondayOf(t),6)}else if(v==="next"){f=addDays(mondayOf(t),7);to=addDays(f,6)}else if(v==="14"){to=addDays(t,13)}else if(v==="month"){to=monthDays(monthOf(t)).slice(-1)[0]}
+    $("dFrom").value=f;$("dTo").value=to},
+  dietApply:()=>{const p0=curDiet(),from=$("dFrom").value,to=$("dTo").value,days=readChips($("main"),"ddays"),mode=($("dMode").querySelector(".on")||{dataset:{v:"replace"}}).dataset.v;
+    if(!from||!to||to<from){toast("Choose a start and end date");return}if(!days.length){toast("Choose at least one day");return}
+    if(Math.round((toD(to)-toD(from))/864e5)>62){toast("Choose up to 2 months at a time");return}
+    const weeks={};let n=0;
+    for(let d=from;d<=to;d=addDays(d,1)){if(!days.includes(dow(d)))continue;const meals=mealsFor(p0,d,from),bySlot={};
+      MEAL_ORDER.forEach(k=>(meals[k]||[]).forEach(t=>{const [sl,pre]=MEAL_SLOT[k];(bySlot[sl]=bySlot[sl]||[]).push("#🥗 "+(pre?pre+": ":"")+t)}));
+      if(!Object.keys(bySlot).length)continue;
+      const w=mondayOf(d),m=weeks[w]=weeks[w]||JSON.parse(JSON.stringify(menuRec(w)));m.days[d]=m.days[d]||{};
+      for(const sl in bySlot){const cur=(m.days[d][sl]||[]).filter(x=>!x.startsWith("#🥗"));m.days[d][sl]=mode==="replace"?bySlot[sl]:cur.concat(bySlot[sl])}
+      n++}
+    for(const w in weeks)menuEdited(w,weeks[w]);
+    editDiet(p=>{p.apply={from,to,days,mode};p.applied={from,to,at:Date.now(),by:me()}});
+    toast(n?`Menu updated for ${n} day${n===1?"":"s"}`:"Nothing to add for those days")},
+  dietOpenMenu:()=>{const p=curDiet();curWeek=mondayOf(p.applied.from);menuMode="menu";render();scrollTo(0,0)},
   dietWith:e=>editDiet(p=>{p.checkWith=e.dataset.v}),
   dietConfirm:()=>{if(!me())return whoSheet();editDiet(p=>{p.checkedBy=me();p.checkedAt=Date.now();p.checkedWith=p.checkWith});toast("Pantry check saved")},
   dietDel:()=>{const p=curDiet();if(!p||!confirm("Delete “"+p.name+"”?"))return;store.set("ghar-diet",diets().filter(x=>x.id!==p.id));dietSel="";render()},
@@ -1392,7 +1472,7 @@ const A={
   dietShare:()=>{window.open("https://wa.me/?text="+encodeURIComponent(dietShareText(curDiet())),"_blank")},
   // shopping
   fromMenu:e=>{const w=addDays(mondayOf(todayISO()),7*+e.dataset.n),m=menuRec(w),s=S(),cat=items();
-    const need={};weekDays(w).forEach(d=>{const day=m.days[d]||{};for(const sl in day)(day[sl]||[]).forEach(x=>{const di=dish(x);if(!di)return;di.ings.forEach(n=>{n=n.trim();if(!n)return;const it=cat[n.toLowerCase()];if(it&&it.staple&&!s.staples)return;if(itemVendor(n)==="milk")return;(need[n]=need[n]||new Set()).add(WD[dow(d)])})})});
+    const need={};weekDays(w).forEach(d=>{const day=m.days[d]||{};for(const sl in day)(day[sl]||[]).forEach(x=>{const di=x[0]==="#"?{ings:dietMatch(x.slice(1)).map(i=>i.n)}:dish(x);if(!di)return;di.ings.forEach(n=>{n=n.trim();if(!n)return;const it=cat[n.toLowerCase()];if(it&&it.staple&&!s.staples)return;if(itemVendor(n)==="milk")return;(need[n]=need[n]||new Set()).add(WD[dow(d)])})})});
     const names=Object.keys(need);if(!names.length){toast("No menu for that week yet");return}
     let added=0;names.forEach(n=>{if(addShopItem(n,itemVendor(n),[...need[n]].join(" ")))added++});
     render();toast(`${added} item${added===1?"":"s"} added${m.status!=="approved"?" (menu not approved yet)":""}`)},
@@ -1427,6 +1507,7 @@ const A={
     store.set("ghar-bill-"+m,list);closeSheet();render();toast("Bill saved")},
   delBill:()=>{if(!confirm("Delete this bill?"))return;store.set("ghar-bill-"+sheetCtx.month,bills(sheetCtx.month).filter(b=>b.id!==sheetCtx.id));closeSheet();render()},
   payAllBills:e=>{store.set("ghar-bill-"+curMonth,bills(curMonth).map(b=>billKey(b)===e.dataset.v?Object.assign({},b,{paid:true}):b));closeSheet();render();toast("Marked paid")},
+  budgetReset:()=>{if(!confirm("Replace all budgets with the suggested amounts?"))return;const s=S();s.budgets=Object.assign({},SUGGESTED_BUDGETS);store.set("ghar-settings",s);render();toast("Budgets set")},
   budgets:()=>{go("setup");setTimeout(()=>{const el=$("bg-staff");if(el){el.scrollIntoView({block:"center"});el.focus()}},50)},
   // setup
   dchip:e=>e.classList.toggle("on"),
@@ -1478,6 +1559,7 @@ document.addEventListener("input",ev=>{
   else if(f==="dayNote"){clearTimeout(inputT);const v=e.value,d=curDate;inputT=setTimeout(()=>editDay(d,r=>{r.note=v}),400)}
   else if(f==="qty"){clearTimeout(inputT);const id=e.dataset.id,v=e.value;inputT=setTimeout(()=>store.set("ghar-shop",shop().map(i=>i.id===id?Object.assign({},i,{qty:v}):i)),400)}
   else if(f==="dietQty"){clearTimeout(inputT);const k=+e.dataset.i,v=e.value;inputT=setTimeout(()=>{const p=JSON.parse(JSON.stringify(curDiet()));p.items[k].q=v;saveDiet(p)},400)}
+  else if(f==="dietMeal"){clearTimeout(inputT);const k=e.dataset.m,v=e.value;inputT=setTimeout(()=>{const p=JSON.parse(JSON.stringify(curDiet()));p.meals=p.meals||{generic:{},byDay:{}};p.meals.generic[k]=v.split(/\n+/).map(x=>x.trim()).filter(Boolean);saveDiet(p)},400)}
   else if(f==="dietFor"){clearTimeout(inputT);const v=e.value;inputT=setTimeout(()=>{const p=JSON.parse(JSON.stringify(curDiet()));p.for=v;saveDiet(p)},500)}
   else if(f==="slotCustom"){sheetCtx.list[+e.dataset.i]="#"+e.value}
   else if(f==="budget"){clearTimeout(inputT);const c=e.dataset.c,v=+e.value||0;inputT=setTimeout(()=>{const s=S();s.budgets=Object.assign({},s.budgets,{[c]:v});store.set("ghar-settings",s)},400)}
